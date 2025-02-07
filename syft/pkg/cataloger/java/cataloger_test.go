@@ -117,8 +117,8 @@ func TestJvmDistributionCataloger(t *testing.T) {
 			name:    "valid 1.8.0",
 			fixture: "test-fixtures/jvm-installs/oracle-jdk-se-8",
 			expected: pkg.Package{
-				Name:      "jdk",
-				Version:   "1.8.0_411-b25",
+				Name:      "jdk-8",
+				Version:   "8u411",
 				FoundBy:   "java-jvm-cataloger",
 				Locations: file.NewLocationSet(file.NewLocation("usr/lib/jvm/jdk-1.8-oracle-x64/release")),
 				Licenses:  pkg.NewLicenseSet(),
@@ -128,7 +128,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 					cpe.Must("cpe:2.3:a:oracle:jre:1.8.0:update411:*:*:*:*:*:*", cpe.DeclaredSource),
 					cpe.Must("cpe:2.3:a:oracle:jdk:1.8.0:update411:*:*:*:*:*:*", cpe.DeclaredSource),
 				},
-				PURL: "pkg:generic/oracle/jdk@1.8.0_411-b25",
+				PURL: "pkg:generic/oracle/jdk-8@8u411?arch=amd64&distro=2.6&os=Linux",
 				Metadata: pkg.JavaVMInstallation{
 					Release: pkg.JavaVMRelease{
 						JavaRuntimeVersion: "1.8.0_411-b25",
@@ -157,7 +157,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 				Licenses:  pkg.NewLicenseSet(),
 				Type:      pkg.BinaryPkg,
 				CPEs:      []cpe.CPE{cpe.Must("cpe:2.3:a:oracle:openjdk:21.0.4:*:*:*:*:*:*:*", cpe.DeclaredSource)},
-				PURL:      "pkg:generic/oracle/openjdk@21.0.4%2B7-LTS?repository_url=https%3A%2F%2Fgithub.com%2Fadoptium%2Fjdk21u.git",
+				PURL:      "pkg:generic/oracle/openjdk@21.0.4%2B7-LTS?arch=aarch64&os=Linux&repository_url=https%3A%2F%2Fgithub.com%2Fadoptium%2Fjdk21u.git",
 				Metadata: pkg.JavaVMInstallation{
 					Release: pkg.JavaVMRelease{
 						Implementor:        "Eclipse Adoptium",
@@ -199,6 +199,95 @@ func TestJvmDistributionCataloger(t *testing.T) {
 					Files: []string{
 						"jvm/openjdk/release",
 						"jvm/openjdk/sibling/child/file1.txt",
+					},
+				},
+			},
+		},
+		{
+			name:    "Oracle JDK 1.8.0_441 Perf",
+			fixture: "test-fixtures/jvm-installs/oracle-jdk1.8.0_441",
+			expected: pkg.Package{
+				Name:      "jdk-8-perf",
+				Version:   "8u441",
+				FoundBy:   "java-jvm-cataloger",
+				Locations: file.NewLocationSet(file.NewLocation("release")),
+				Licenses:  pkg.NewLicenseSet(),
+				Type:      pkg.BinaryPkg,
+				CPEs: []cpe.CPE{
+					cpe.Must("cpe:2.3:a:oracle:java_se:1.8.0:update441:*:*:enterprise_performance_pack:*:*:*", cpe.DeclaredSource),
+					cpe.Must("cpe:2.3:a:oracle:jre:1.8.0:update441:*:*:enterprise_performance_pack:*:*:*", cpe.DeclaredSource),
+					cpe.Must("cpe:2.3:a:oracle:jdk:1.8.0:update441:*:*:enterprise_performance_pack:*:*:*", cpe.DeclaredSource)},
+				PURL: "pkg:generic/oracle/jdk-8-perf@8u441?arch=amd64&distro=2.6&os=Linux",
+				Metadata: pkg.JavaVMInstallation{
+					Release: pkg.JavaVMRelease{
+						JavaRuntimeVersion: "1.8.0_441-perf-46-b09",
+						JavaVersion:        "1.8.0_441",
+						OsArch:             "amd64",
+						OsName:             "Linux",
+						OsVersion:          "2.6",
+						BuildType:          "commercial",
+					},
+					Files: []string{
+						"release",
+					},
+				},
+			},
+		},
+		{
+			name:    "GraalVM Community Edition 22.3.0 for JDK 17",
+			fixture: "test-fixtures/jvm-installs/graalvm-ce-java17-22.3.0",
+			expected: pkg.Package{
+				Name:      "graalvm22-ce-17-jdk",
+				Version:   "22.3.0",
+				FoundBy:   "java-jvm-cataloger",
+				Locations: file.NewLocationSet(file.NewLocation("release")),
+				Licenses:  pkg.NewLicenseSet(),
+				Type:      pkg.BinaryPkg,
+				CPEs: []cpe.CPE{
+					cpe.Must("cpe:2.3:a:oracle:graalvm:22.3.0:*:*:*:community:*:*:*", cpe.DeclaredSource)},
+				PURL: "pkg:generic/oracle/graalvm22-ce-17-jdk@22.3.0?arch=aarch64&os=Linux",
+				Metadata: pkg.JavaVMInstallation{
+					Release: pkg.JavaVMRelease{
+						Implementor:     "GraalVM Community",
+						JavaVersion:     "17.0.5",
+						JavaVersionDate: "2022-10-18",
+						OsArch:          "aarch64",
+						OsName:          "Linux",
+						GraalvmVersion:  "22.3.0",
+					},
+					Files: []string{
+						"release",
+					},
+				},
+			},
+		},
+		{
+			name:    "Oracle GraalVM Enterprise Edition 21.3.9 for JDK 11",
+			fixture: "test-fixtures/jvm-installs/graalvm-ee-java11-21.3.9",
+			expected: pkg.Package{
+				Name:      "graalvm21-ee-11-jdk",
+				Version:   "21.3.9",
+				FoundBy:   "java-jvm-cataloger",
+				Locations: file.NewLocationSet(file.NewLocation("release")),
+				Licenses:  pkg.NewLicenseSet(),
+				Type:      pkg.BinaryPkg,
+				CPEs: []cpe.CPE{
+					cpe.Must("cpe:2.3:a:oracle:graalvm:21.3.9:*:*:*:enterprise:*:*:*", cpe.DeclaredSource)},
+				PURL: "pkg:generic/oracle/graalvm21-ee-11-jdk@21.3.9?arch=x86_64&os=Linux",
+				Metadata: pkg.JavaVMInstallation{
+					Release: pkg.JavaVMRelease{
+						Implementor:        "Oracle Corporation",
+						JavaRuntimeVersion: "11.0.22+9-LTS-jvmci-21.3-b43",
+						JavaVersion:        "11.0.22",
+						ImplementorVersion: "18.9",
+						JavaVersionDate:    "2024-01-16",
+						OsArch:             "x86_64",
+						OsName:             "Linux",
+						GraalvmVersion:     "21.3.9",
+						BuildType:          "commercial",
+					},
+					Files: []string{
+						"release",
 					},
 				},
 			},
