@@ -184,8 +184,7 @@ func identifyGraalvmPurlCpes(ri *pkg.JavaVMRelease, jvmVersion string, hasJdk bo
 			product = fmt.Sprintf("graalvm%d-ce-%d-jdk", graalFamily, javaFamily)
 		}
 	} else { // Oracle GraalVM releases
-
-		if graal23orLater { // Oracle GraalVM
+		if graal23orLater {
 			product = fmt.Sprintf("graalvm-%d-jdk", javaFamily)
 			version = javaVersion
 		} else { // Pre 23 legacy naming: Oracle GraalVM Enterprise Edition
@@ -202,15 +201,12 @@ func identifyGraalvmPurlCpes(ri *pkg.JavaVMRelease, jvmVersion string, hasJdk bo
 
 // Identify the Oracle JDK and OpenJDK/JavaSE products
 func identifyOraclePurlCpes(ri *pkg.JavaVMRelease, product, jvmVersion string, hasJdk bool) (*packageurl.PackageURL, []cpe.CPE) {
+	purlProduct := product
+	purlVersion := ""
 	cpeEdition := ""
-	productSuffix := ""
-	javaFamily := 0
-	javaVersion := jvmVersion
-	purlVersion := jvmVersion
-	updateNumber := ""
 
 	if jvmVersion != "" {
-		javaFamily, javaVersion, updateNumber = getJVMFamilyVersionAndUpdate(jvmVersion)
+		javaFamily, javaVersion, updateNumber := getJVMFamilyVersionAndUpdate(jvmVersion)
 		purlVersion = javaVersion
 		if javaFamily <= 8 {
 			purlVersion = strconv.Itoa(javaFamily)
@@ -218,20 +214,18 @@ func identifyOraclePurlCpes(ri *pkg.JavaVMRelease, product, jvmVersion string, h
 				purlVersion = fmt.Sprintf("%su%s", purlVersion, updateNumber)
 			}
 		}
+		// Handle Oracle -perf releases
+		if javaFamily != 0 {
+			purlProduct += fmt.Sprintf("-%d", javaFamily)
+		}
+		if strings.Contains(jvmVersion, "-perf") {
+			purlProduct += "-perf"
+			cpeEdition = "enterprise_performance_pack"
+		}
 	}
-
-	// Handle Oracle -perf releases
-	if strings.Contains(jvmVersion, "-perf") {
-		productSuffix = "-perf"
-		cpeEdition = "enterprise_performance_pack"
-	}
-	javaFamilyStr := ""
-	if javaFamily != 0 {
-		javaFamilyStr = fmt.Sprintf("-%d", javaFamily)
-	}
-	purlProduct := fmt.Sprintf("%s%s%s", product, javaFamilyStr, productSuffix)
-
-	return jvmPurl(ri, purlVersion, oracleVendor, purlProduct), jvmCpes(jvmVersion, oracleVendor, product, ri.ImageType, hasJdk, cpeEdition)
+	purl := jvmPurl(ri, purlVersion, oracleVendor, purlProduct)
+	cpes := jvmCpes(jvmVersion, oracleVendor, product, ri.ImageType, hasJdk, cpeEdition)
+	return purl, cpes
 }
 
 func identifyProductPurlCpes(ri *pkg.JavaVMRelease, path string, hasJdk bool) (*packageurl.PackageURL, []cpe.CPE) {
