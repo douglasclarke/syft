@@ -793,7 +793,7 @@ JAVA_VERSION_DATE="2024-01-16"
 LIBC="gnu"
 OS_NAME="Linux"
 OS_ARCH="aarch64"
-graalVMVersionField="21.3.9"`,
+GRAALVM_VERSION="21.3.9"`,
 			expectedCustomName:  graalVMVersionField,
 			expectedCustomValue: "21.3.9",
 			expectedJavaVersion: "11.0.22",
