@@ -125,13 +125,8 @@ func TestJvmCpes(t *testing.T) {
 			},
 		},
 		{
-			name: "Oracle JDK 8 performance pack",
-			ri: &pkg.JavaVMRelease{
-				JavaRuntimeVersion: "1.8.0_441-perf-46-b09",
-				JavaVersion:        "1.8.0_441",
-				ImageType:          "JDK",
-				BuildType:          "commercial",
-			},
+			name:   "Oracle JDK 8 performance pack",
+			ri:     loadRI("test-fixtures/jdk-releases/OracleJDK_1.8.0_441-perf"),
 			hasJdk: true,
 			expected: []cpe.CPE{
 				{
@@ -639,16 +634,8 @@ func TestIdentifyPurl(t *testing.T) {
 			expectedPURL: "pkg:generic/oracle/jdk-23@23.0.1%2B11-39?arch=x86_64&distro=8.9&os=Linux",
 		},
 		{
-			name: "Oracle JDK-8-perf complete",
-			ri: &pkg.JavaVMRelease{
-				JavaVersion:        "1.8.0_441",
-				JavaRuntimeVersion: "1.8.0_441-perf-46-b09",
-				OsName:             "Linux",
-				OsVersion:          "2.6",
-				OsArch:             "amd64",
-				Source:             ".:2e39681b25ff jdk17:a6f12975074a jdk17/open:d91adbf27688 jdk8:6bd9ddba3cb1",
-				BuildType:          "commercial",
-			},
+			name:         "Oracle JDK-8-perf complete",
+			ri:           loadRI("test-fixtures/jdk-releases/OracleJDK_1.8.0_441-perf"),
 			expectedPURL: "pkg:generic/oracle/jdk-8-perf@8u441?arch=amd64&distro=2.6&os=Linux",
 		},
 		{
