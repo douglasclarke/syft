@@ -13,12 +13,6 @@ import (
 	"github.com/anchore/syft/syft/pkg"
 )
 
-func loadRI(testFixture string) *pkg.JavaVMRelease {
-	ri_content, _ := os.ReadFile(testFixture)
-	ri, _ := parseJvmReleaseInfo(io.NopCloser(strings.NewReader(string(ri_content))))
-	return ri
-}
-
 func TestJvmCpes(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -313,7 +307,7 @@ func TestJvmCpes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var result []cpe.CPE
 			if tt.ri != nil {
-				_, result = identifyProductPurlCpes(tt.ri, "", tt.hasJdk)
+				_, result = identifyProductPurlCpes(tt.ri, "some-path", tt.hasJdk)
 			} else {
 				result = jvmCpes(tt.pkgVersion, tt.primaryVendor, tt.primaryProduct, tt.imageType, tt.hasJdk, tt.edition)
 			}
@@ -586,7 +580,7 @@ func TestIdentifyProductPurl(t *testing.T) {
 func TestIdentifyPurl(t *testing.T) {
 	tests := []struct {
 		name         string
-		ri           pkg.JavaVMRelease
+		ri           *pkg.JavaVMRelease
 		version      string
 		vendor       string
 		product      string
@@ -594,7 +588,7 @@ func TestIdentifyPurl(t *testing.T) {
 	}{
 		{
 			name: "build source repo provided",
-			ri: pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				BuildSourceRepo: "https://github.com/adoptium/temurin-build.git",
 			},
 			version:      "21.0.4",
@@ -604,7 +598,7 @@ func TestIdentifyPurl(t *testing.T) {
 		},
 		{
 			name: "source repo provided, no build source repo",
-			ri: pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				SourceRepo: "https://github.com/adoptium/jdk21u.git",
 			},
 			version:      "21.0.4",
@@ -614,7 +608,7 @@ func TestIdentifyPurl(t *testing.T) {
 		},
 		{
 			name: "no repository URLs provided",
-			ri:   pkg.JavaVMRelease{
+			ri:   &pkg.JavaVMRelease{
 				// No repository URLs provided
 			},
 			version:      "17.0.2",
@@ -624,7 +618,7 @@ func TestIdentifyPurl(t *testing.T) {
 		},
 		{
 			name: "JRE with source repo",
-			ri: pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				SourceRepo: "https://github.com/adoptium/jre-repo.git",
 			},
 			version:      "8u302",
@@ -634,7 +628,7 @@ func TestIdentifyPurl(t *testing.T) {
 		},
 		{
 			name: "Oracle JDK with OS Distro and Arch",
-			ri: pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				OsArch:    "x86_64",
 				OsName:    "Linux",
 				OsVersion: "8.9",
@@ -646,7 +640,7 @@ func TestIdentifyPurl(t *testing.T) {
 		},
 		{
 			name: "Oracle JDK-8-perf complete",
-			ri: pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				JavaVersion:        "1.8.0_441",
 				JavaRuntimeVersion: "1.8.0_441-perf-46-b09",
 				OsName:             "Linux",
@@ -660,7 +654,7 @@ func TestIdentifyPurl(t *testing.T) {
 		{
 			// https://jdk.java.net/java-se-ri/8-MR6
 			name: "OpenJDK JavaSE 8 RI build 1.8.0_44-b02",
-			ri: pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				JavaVersion: "1.8.0_44-b02",
 				OsName:      "Linux",
 				OsVersion:   "2.6",
@@ -671,7 +665,7 @@ func TestIdentifyPurl(t *testing.T) {
 		},
 		{
 			name: "GraalVM Enterprise Edition graalvm-ee-java11-21.3.9",
-			ri: pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				Implementor:        "Oracle Corporation",
 				ImplementorVersion: "18.9",
 				JavaRuntimeVersion: "11.0.22+9-LTS-jvmci-21.3-b43",
@@ -680,14 +674,14 @@ func TestIdentifyPurl(t *testing.T) {
 				Libc:               "gnu",
 				OsName:             "Linux",
 				OsArch:             "aarch64",
-				GraalvmVersion:     "21.3.9",
+				CustomFields:       map[string]string{GRAALVM_VERSION: "21.3.9"},
 			},
 			expectedPURL: "pkg:generic/oracle/graalvm21-ee-11-jdk@21.3.9?arch=aarch64&os=Linux",
 		},
 		{
 			// https://github.com/graalvm/graalvm-ce-builds/releases/
 			name: "GraalVM Community Edition 23.0.2",
-			ri: pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				Implementor:        "GraalVM Community",
 				JavaRuntimeVersion: "23.0.2+7-jvmci-b01",
 				JavaVersion:        "23.0.2",
@@ -695,14 +689,14 @@ func TestIdentifyPurl(t *testing.T) {
 				Libc:               "gnu",
 				OsName:             "Linux",
 				OsArch:             "aarch64",
-				GraalvmVersion:     "24.1.2",
+				CustomFields:       map[string]string{GRAALVM_VERSION: "24.1.2"},
 			},
 			expectedPURL: "pkg:generic/oracle/graalvm-ce-23-jdk@23.0.2?arch=aarch64&os=Linux",
 		},
 		{
 			// https://github.com/graalvm/graalvm-ce-builds/releases/
 			name: "GraalVM Community Edition 21.0.2",
-			ri: pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				Implementor:        "GraalVM Community",
 				JavaRuntimeVersion: "21.0.1+12-jvmci-23.1-b19",
 				JavaVersion:        "21.0.1",
@@ -710,28 +704,28 @@ func TestIdentifyPurl(t *testing.T) {
 				Libc:               "gnu",
 				OsName:             "Linux",
 				OsArch:             "x86_64",
-				GraalvmVersion:     "23.1.1",
+				CustomFields:       map[string]string{GRAALVM_VERSION: "23.1.1"},
 			},
 			expectedPURL: "pkg:generic/oracle/graalvm-ce-21-jdk@21.0.1?arch=x86_64&os=Linux",
 		},
 		{
 			// https://github.com/graalvm/graalvm-ce-builds/releases/
 			name: "GraalVM Community Edition graalvm-ce-java17-22.3.0",
-			ri: pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				Implementor:     "GraalVM Community",
 				JavaVersion:     "17.0.5",
 				JavaVersionDate: "2022-10-18",
 				Libc:            "gnu",
 				OsName:          "Linux",
 				OsArch:          "aarch64",
-				GraalvmVersion:  "22.3.0",
+				CustomFields:    map[string]string{GRAALVM_VERSION: "22.3.0"},
 			},
 			expectedPURL: "pkg:generic/oracle/graalvm22-ce-17-jdk@22.3.0?arch=aarch64&os=Linux",
 		},
 		{
 			// graalvm-jdk-23.0.1+11.1/release
 			name: "Oracle GraalVM for JDK 24.1.1",
-			ri: pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				Implementor:        "Oracle Corporation",
 				JavaRuntimeVersion: "23.0.1+11-jvmci-b01",
 				JavaVersion:        "23.0.1",
@@ -739,7 +733,7 @@ func TestIdentifyPurl(t *testing.T) {
 				Libc:               "gnu",
 				OsName:             "Linux",
 				OsArch:             "x86_64",
-				GraalvmVersion:     "24.1.1",
+				CustomFields:       map[string]string{GRAALVM_VERSION: "24.1.1"},
 			},
 			expectedPURL: "pkg:generic/oracle/graalvm-23-jdk@23.0.1?arch=x86_64&os=Linux",
 		},
@@ -749,12 +743,76 @@ func TestIdentifyPurl(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var actualPURL *packageurl.PackageURL
 			if tt.version == "" && tt.vendor == "" && tt.product == "" {
-				tt.version = jvmPackageVersion(&tt.ri)
-				actualPURL, _ = identifyProductPurlCpes(&tt.ri, "", true)
+				tt.version = jvmPackageVersion(tt.ri)
+				actualPURL, _ = identifyProductPurlCpes(tt.ri, "", true)
 			} else {
-				actualPURL = jvmPurl(&tt.ri, tt.version, tt.vendor, tt.product)
+				actualPURL = jvmPurl(tt.ri, tt.version, tt.vendor, tt.product)
 			}
 			assert.Equal(t, tt.expectedPURL, actualPURL.ToString())
+		})
+	}
+}
+
+func loadRI(testFixture string) *pkg.JavaVMRelease {
+	ri_content, _ := os.ReadFile(testFixture)
+	ri, _ := parseJvmReleaseInfo(io.NopCloser(strings.NewReader(string(ri_content))))
+	return ri
+}
+
+func TestParseJvmReleaseInfo(t *testing.T) {
+	tests := []struct {
+		name                string
+		riContent           string
+		expectRiNil         bool
+		expectedJavaVersion string
+		expectedCustomName  string
+		expectedCustomValue string
+	}{
+		{
+			name:        "Empty",
+			riContent:   "",
+			expectRiNil: true,
+		},
+		{
+			name: "CustomField FOO",
+			riContent: `
+JAVA_VERSION="1"
+FOO=BAR`,
+			expectedCustomName:  "FOO",
+			expectedCustomValue: "BAR",
+			expectedJavaVersion: "1",
+		},
+		{
+			name: "Oracle GraalVM EE 21.3.9",
+			riContent: `
+IMPLEMENTOR="Oracle Corporation"
+IMPLEMENTOR_VERSION="18.9"
+JAVA_RUNTIME_VERSION="11.0.22+9-LTS-jvmci-21.3-b43"
+JAVA_VERSION="11.0.22"
+JAVA_VERSION_DATE="2024-01-16"
+LIBC="gnu"
+OS_NAME="Linux"
+OS_ARCH="aarch64"
+GRAALVM_VERSION="21.3.9"`,
+			expectedCustomName:  GRAALVM_VERSION,
+			expectedCustomValue: "21.3.9",
+			expectedJavaVersion: "11.0.22",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ri, _ := parseJvmReleaseInfo(io.NopCloser(strings.NewReader(tt.riContent)))
+
+			if tt.expectRiNil {
+				assert.Nil(t, ri)
+			} else {
+				assert.NotNil(t, ri)
+				assert.Equal(t, tt.expectedJavaVersion, ri.JavaVersion)
+				if tt.expectedCustomName != "" {
+					assert.Equal(t, tt.expectedCustomValue, ri.CustomFields[tt.expectedCustomName])
+				}
+			}
 		})
 	}
 }

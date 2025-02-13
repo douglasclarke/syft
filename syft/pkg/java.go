@@ -91,8 +91,8 @@ type JavaVMRelease struct {
 	// BuildType can be 'commercial' (used in some older oracle JDK distributions)
 	BuildType string `mapstructure:"BUILD_TYPE,omitempty" json:"buildType,omitempty"`
 
-	// GraalvmVersion is published in Oracle's GraalVM EE/JDK releases and required for correct package identification
-	GraalvmVersion string `mapstructure:"GRAALVM_VERSION,omitempty" json:"graalvmVersion,omitempty"`
+	// Collect additional fields to support vendor specific
+	CustomFields map[string]string `mapstructure:",remain"`
 }
 
 // JavaArchive encapsulates all Java ecosystem metadata for a package as well as an (optional) parent relationship.
