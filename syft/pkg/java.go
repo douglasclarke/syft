@@ -91,7 +91,7 @@ type JavaVMRelease struct {
 	// BuildType can be 'commercial' (used in some older oracle JDK distributions)
 	BuildType string `mapstructure:"BUILD_TYPE,omitempty" json:"buildType,omitempty"`
 
-	// Collect additional fields to support vendor specific
+	// Collect custom fields to support vendor specific configuration (eg. GRAALVM_VERSION)
 	CustomFields map[string]string `mapstructure:",remain"`
 }
 

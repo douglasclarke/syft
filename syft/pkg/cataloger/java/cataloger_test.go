@@ -253,7 +253,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 						JavaVersionDate: "2022-10-18",
 						OsArch:          "aarch64",
 						OsName:          "Linux",
-						CustomFields:    map[string]string{GRAALVM_VERSION: "22.3.0"},
+						CustomFields:    map[string]string{graalVmVersionField: "22.3.0"},
 					},
 					Files: []string{
 						"release",
@@ -283,7 +283,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 						JavaVersionDate:    "2024-01-16",
 						OsArch:             "x86_64",
 						OsName:             "Linux",
-						CustomFields:       map[string]string{GRAALVM_VERSION: "21.3.9"},
+						CustomFields:       map[string]string{graalVmVersionField: "21.3.9"},
 						BuildType:          "commercial",
 					},
 					Files: []string{

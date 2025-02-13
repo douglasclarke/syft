@@ -163,14 +163,14 @@ func jvmPurl(ri *pkg.JavaVMRelease, version, vendor, product string) *packageurl
 	return purl
 }
 
-const GRAALVM_VERSION = "GRAALVM_VERSION"
+const graalVmVersionField = "GRAALVM_VERSION"
 
 // Identify GraalVM specific versioning covering GraalVM community and enterprise editions (with swEdition CPE values)
-// GRAALVM_VERSION 23.0.0 or later is the newer versioning scheme for all GraalVM releases
+// graalVmVersionField 23.0.0 or later is the newer versioning scheme for all GraalVM releases
 func identifyGraalvmPurlCpes(ri *pkg.JavaVMRelease, jvmVersion string, hasJdk bool) (*packageurl.PackageURL, []cpe.CPE) {
 	cpeSWEdition := ""
 	javaFamily, javaVersion, _ := getJVMFamilyVersionAndUpdate(jvmVersion)
-	graalFamily, graalVersion, _ := getJVMFamilyVersionAndUpdate(ri.CustomFields[GRAALVM_VERSION])
+	graalFamily, graalVersion, _ := getJVMFamilyVersionAndUpdate(ri.CustomFields[graalVmVersionField])
 
 	isCommunityEdition := ri.Implementor == "GraalVM Community"
 	graal23orLater := graalFamily >= 23
@@ -253,7 +253,7 @@ func identifyProductPurlCpes(ri *pkg.JavaVMRelease, path string, hasJdk bool) (*
 	case strings.Contains(implementor, "sun"):
 		return simpleIdentify("sun", pickProduct())
 
-	case ri.CustomFields[GRAALVM_VERSION] != "" || strings.Contains(implementor, "graalvm") || strings.Contains(path, "graalvm"):
+	case ri.CustomFields[graalVmVersionField] != "" || strings.Contains(implementor, "graalvm") || strings.Contains(path, "graalvm"):
 		return identifyGraalvmPurlCpes(ri, jvmPackageVersion, hasJdk)
 
 	case strings.Contains(implementor, "oracle") || strings.Contains(path, "oracle") || strings.Contains(ri.BuildType, "commercial"):
