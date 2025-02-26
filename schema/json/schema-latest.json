@@ -1274,9 +1274,20 @@
         },
         "buildType": {
           "type": "string"
+        },
+        "CustomFields": {
+          "patternProperties": {
+            ".*": {
+              "type": "string"
+            }
+          },
+          "type": "object"
         }
       },
-      "type": "object"
+      "type": "object",
+      "required": [
+        "CustomFields"
+      ]
     },
     "JavascriptNpmPackage": {
       "properties": {
