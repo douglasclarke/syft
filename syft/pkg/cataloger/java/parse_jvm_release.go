@@ -64,9 +64,8 @@ const (
 // In terms of the temurin flavor, these are controlled by:
 // - config: https://github.com/adoptium/temurin-build/blob/v2023.01.03/sbin/common/config_init.sh
 // - build script: https://github.com/adoptium/temurin-build/blob/v2023.01.03/sbin/build.sh#L1584-L1796
-
 type jvmCpeInfo struct {
-	vendor, product, version, edition, swEdition string
+	vendor, product, version, update, edition, swEdition string
 }
 
 // jvmConfiguration encapsulates all of the configuration collected from the release info and path as well
@@ -78,8 +77,7 @@ type jvmConfiguration struct {
 	path                         string
 	hasJdk                       bool
 	vendor, purlProduct, version string
-	// CPE specific config determined during identification phase
-	cpeVersion, cpeProduct, cpeEdition, cpeSwEdition string
+	cpeInfos                     []jvmCpeInfo
 }
 
 func parseJVMRelease(_ context.Context, resolver file.Resolver, _ *generic.Environment, reader file.LocationReadCloser) ([]pkg.Package, []artifact.Relationship, error) {
@@ -213,6 +211,7 @@ func identifyGraalVM(ri *pkg.JavaVMRelease, path string, hasJdk bool) jvmConfigu
 
 	if isCommunityEdition {
 		cpeSWEdition = "community"
+		cpeEdition = fmt.Sprintf("%d", javaFamily)
 		if graal23orLater {
 			product = fmt.Sprintf("%s-ce-%d-jdk", graalVMProduct, javaFamily)
 			version = javaVersion
@@ -220,9 +219,9 @@ func identifyGraalVM(ri *pkg.JavaVMRelease, path string, hasJdk bool) jvmConfigu
 			product = fmt.Sprintf("%s%d-ce-%d-jdk", graalVMProduct, graalFamily, javaFamily)
 		}
 	} else { // Oracle GraalVM releases
+		cpeEdition = fmt.Sprintf("%d", javaFamily)
 		if graal23orLater {
 			product = fmt.Sprintf("%s-%d-jdk", graalVMProduct, javaFamily)
-			version = javaVersion
 		} else { // Pre 23 legacy naming: Oracle GraalVM Enterprise Edition
 			if javaFamily == 0 && strings.Contains(path, "graalvm-ee-java8") {
 				javaFamily = 8
@@ -233,30 +232,36 @@ func identifyGraalVM(ri *pkg.JavaVMRelease, path string, hasJdk bool) jvmConfigu
 			product = fmt.Sprintf("%s%d-ee-%d-jdk", graalVMProduct, graalFamily, javaFamily)
 			// ensure CPE SWEdition configured
 			cpeSWEdition = "enterprise"
-			cpeEdition = fmt.Sprintf("%d", javaFamily)
 		}
 	}
-	return jvmConfiguration{ri: ri, vendor: oracleVendor, purlProduct: product, cpeProduct: graalVMProduct,
-		version: version, cpeSwEdition: cpeSWEdition, cpeEdition: cpeEdition, path: path, hasJdk: hasJdk}
+	cpeInfos := []jvmCpeInfo{{vendor: oracleVendor, product: graalVMProduct, version: version, edition: cpeEdition, swEdition: cpeSWEdition}}
+	return jvmConfiguration{ri: ri, vendor: oracleVendor, purlProduct: product, version: version, cpeInfos: cpeInfos, path: path, hasJdk: hasJdk}
 }
 
 // Identify the Oracle JDK products
 func identifyOracleJDK(ri *pkg.JavaVMRelease, product, path string, hasJdk bool) jvmConfiguration {
-	riVersion := jvmPackageVersion(ri)
+	jvmVersion := jvmPackageVersion(ri)
 	purlProduct := product
-	purlVersion := ""
+	purlVersion := jvmVersion
+	cpeVersion := jvmVersion
 	cpeSWEdition := ""
+	cpeUpdate := ""
+	products := []string{"java_se", jre}
 
-	if riVersion != "" {
-		javaFamily, javaVersion, updateNumber := getJVMFamilyVersionAndUpdate(riVersion)
-		purlVersion = javaVersion
+	if hasJdk {
+		products = append(products, jdk)
+	}
+
+	if jvmVersion != "" {
+		javaFamily, javaVersion, updateNumber := getJVMFamilyVersionAndUpdate(jvmVersion)
+		cpeVersion = javaVersion
 
 		// Oracle JDK uses 8uXXX instead of 1.8.0_XXX versioning
 		if javaFamily <= 8 {
 			purlVersion = strconv.Itoa(javaFamily)
 			if updateNumber != "" {
-				purlVersion = fmt.Sprintf("%su%s", purlVersion, updateNumber)
-				riVersion = purlVersion
+				purlVersion = fmt.Sprintf("%su%v", purlVersion, updateNumber)
+				cpeUpdate = updateNumber
 			}
 		}
 		if javaFamily != 0 {
@@ -268,8 +273,11 @@ func identifyOracleJDK(ri *pkg.JavaVMRelease, product, path string, hasJdk bool)
 			cpeSWEdition = "enterprise_performance_pack"
 		}
 	}
-	return jvmConfiguration{ri: ri, vendor: oracleVendor, purlProduct: purlProduct, cpeProduct: product,
-		version: purlVersion, cpeVersion: riVersion, cpeSwEdition: cpeSWEdition, path: path, hasJdk: hasJdk}
+	cpeInfos := []jvmCpeInfo{}
+	for _, prod := range products {
+		cpeInfos = append(cpeInfos, jvmCpeInfo{vendor: oracleVendor, product: prod, version: cpeVersion, update: cpeUpdate, swEdition: cpeSWEdition})
+	}
+	return jvmConfiguration{ri: ri, vendor: oracleVendor, purlProduct: purlProduct, version: purlVersion, cpeInfos: cpeInfos, path: path, hasJdk: hasJdk}
 }
 
 // Primary identification function collecting necessary config and handling simple JVM providers
@@ -278,6 +286,7 @@ func identifyJvm(ri *pkg.JavaVMRelease, path string, hasJdk bool) jvmConfigurati
 	implementor := strings.ReplaceAll(strings.ToLower(ri.Implementor), " ", "")
 
 	version := jvmPackageVersion(ri)
+	_, javaVersion, _ := getJVMFamilyVersionAndUpdate(version)
 	// TODO: detect old and new version format from multiple fields
 
 	pickProduct := func() string {
@@ -287,16 +296,19 @@ func identifyJvm(ri *pkg.JavaVMRelease, path string, hasJdk bool) jvmConfigurati
 		return jre
 	}
 
-	jvmInfo := func(vendor, product, version string) jvmConfiguration {
-		return jvmConfiguration{ri: ri, vendor: vendor, purlProduct: product, cpeProduct: product, version: version, path: path, hasJdk: hasJdk}
+	newJvmConfig := func(vendor, product, version string) jvmConfiguration {
+		cpeInfos := []jvmCpeInfo{{vendor: vendor, product: product, version: javaVersion}}
+		return jvmConfiguration{ri: ri, vendor: vendor, purlProduct: product, version: version, cpeInfos: cpeInfos, path: path, hasJdk: hasJdk}
 	}
 
 	switch {
 	case strings.Contains(implementor, "azul") || strings.Contains(path, "zulu"):
-		return jvmInfo("azul", "zulu", version)
+		config := newJvmConfig("azul", "zulu", version)
+		config.cpeInfos = append(config.cpeInfos, jvmCpeInfo{vendor: oracleVendor, product: openJdkProduct, version: version})
+		return config
 
 	case strings.Contains(implementor, "sun"):
-		return jvmInfo("sun", pickProduct(), version)
+		return newJvmConfig("sun", pickProduct(), version)
 
 	case ri.CustomFields[graalVMVersionField] != "" || strings.Contains(implementor, graalVMProduct) || strings.Contains(path, graalVMProduct):
 		return identifyGraalVM(ri, path, hasJdk)
@@ -309,85 +321,39 @@ func identifyJvm(ri *pkg.JavaVMRelease, path string, hasJdk bool) jvmConfigurati
 		return identifyOracleJDK(ri, pickProduct(), path, hasJdk)
 	}
 
-	return jvmInfo(oracleVendor, openJdkProduct, version)
+	return newJvmConfig(oracleVendor, openJdkProduct, version)
 }
 
-// TODO
+// Construct CPE's from []jvmCPEInfo. All values are provided in jvmCPEInfo with the exception of
+// update string being prefixed with 'update' if present.
 func (config jvmConfiguration) jvmCpes() []cpe.CPE {
 	// see https://github.com/anchore/syft/issues/2422 for more context
 
-	var candidates []jvmCpeInfo
-
-	newCandidate := func(ven, prod, ver string) {
-		candidates = append(candidates, jvmCpeInfo{
-			vendor:    ven,
-			product:   prod,
-			version:   ver,
-			edition:   config.cpeEdition,
-			swEdition: config.cpeSwEdition,
-		})
-	}
-
-	newEnterpriseCandidate := func(ven, ver string) {
-		newCandidate(ven, jre, ver)
-		if config.hasJdk || jvmProjectByType(config.ri.ImageType) == jdk {
-			newCandidate(ven, jdk, ver)
-		}
-	}
-
-	switch {
-	case config.vendor == "azul":
-		newCandidate(config.vendor, "zulu", config.version)
-		newCandidate(oracleVendor, openJdkProduct, config.version)
-
-	case config.vendor == "sun":
-		newEnterpriseCandidate(config.vendor, config.version)
-
-	case config.vendor == oracleVendor && strings.Contains(config.cpeProduct, graalVMProduct):
-		newCandidate(config.vendor, config.cpeProduct, config.version)
-
-	case config.vendor == oracleVendor && config.cpeProduct != openJdkProduct && config.purlProduct != openJdkProduct:
-		newCandidate(config.vendor, "java_se", config.version)
-		newEnterpriseCandidate(config.vendor, config.version)
-	default:
-		newCandidate(config.vendor, config.cpeProduct, config.version)
-	}
-
 	var cpes []cpe.CPE
-	for _, candidate := range candidates {
-		c := newJvmCpe(candidate)
-		if c == nil {
-			continue
-		}
-		cpes = append(cpes, *c)
-	}
 
+	for _, cpeInfo := range config.cpeInfos {
+		if cpeInfo.vendor != "" && cpeInfo.version != "" {
+			cpe := cpe.CPE{
+				Attributes: cpe.Attributes{
+					Part:      "a",
+					Vendor:    cpeInfo.vendor,
+					Product:   cpeInfo.product,
+					Version:   cpeInfo.version,
+					Edition:   cpeInfo.edition,
+					SWEdition: cpeInfo.swEdition,
+				},
+				// note: we must use a declared source here. Though we are not directly raising up raw CPEs from cataloged material,
+				// these are vastly more reliable and accurate than what would be generated from the cpe generator logic.
+				// We want these CPEs to override any generated CPEs (and in fact prevent the generation of CPEs for these packages altogether).
+				Source: cpe.DeclaredSource,
+			}
+			if cpeInfo.update != "" {
+				cpe.Attributes.Update = fmt.Sprintf("update%v", cpeInfo.update)
+			}
+			cpes = append(cpes, cpe)
+		}
+	}
 	return cpes
-}
-
-func getJVMVersionAndUpdate(version string) (string, string) {
-	hasPlus := strings.Contains(version, "+")
-	hasUnderscore := strings.Contains(version, "_")
-
-	switch {
-	case hasUnderscore:
-		// assume legacy version strings are provided
-		// example: 1.8.0_302-b08
-		fields := strings.Split(version, "_")
-		if len(fields) == 2 {
-			shortVer := fields[0]
-			fields = strings.Split(fields[1], "-")
-			return shortVer, fields[0]
-		}
-	case hasPlus:
-		// assume JEP 223 version strings are provided
-		// example: 9.0.1+20
-		fields := strings.Split(version, "+")
-		return fields[0], ""
-	}
-
-	// this could be a legacy or modern string that does not have an update
-	return version, ""
 }
 
 // getJVMFamilyVersionAndUpdate returns the Java Family (eg 8, 11,17, 21, 23), the version (JEP 223, MAJOR.MINOR.SECURITY),
@@ -414,38 +380,6 @@ func getJVMFamilyVersionAndUpdate(version string) (int, string, string) {
 
 	// this could be a legacy or modern string that does not have an update
 	return javaFamily, versionStr, update
-}
-
-func newJvmCpe(candidate jvmCpeInfo) *cpe.CPE {
-	if candidate.vendor == "" || candidate.product == "" || candidate.version == "" {
-		return nil
-	}
-
-	shortVer, update := getJVMVersionAndUpdate(candidate.version)
-
-	if shortVer == "" {
-		return nil
-	}
-
-	if update != "" && !strings.Contains(strings.ToLower(update), "update") {
-		update = "update" + trim0sFromLeft(update)
-	}
-
-	return &cpe.CPE{
-		Attributes: cpe.Attributes{
-			Part:      "a",
-			Vendor:    candidate.vendor,
-			Product:   candidate.product,
-			Version:   shortVer,
-			Update:    update,
-			Edition:   candidate.edition,
-			SWEdition: candidate.swEdition,
-		},
-		// note: we must use a declared source here. Though we are not directly raising up raw CPEs from cataloged material,
-		// these are vastly more reliable and accurate than what would be generated from the cpe generator logic.
-		// We want these CPEs to override any generated CPEs (and in fact prevent the generation of CPEs for these packages altogether).
-		Source: cpe.DeclaredSource,
-	}
 }
 
 func jvmProjectByType(ty string) string {
@@ -526,8 +460,8 @@ func jvmPackageVersion(ri *pkg.JavaVMRelease) string {
 		return ri.JavaRuntimeVersion
 	case ri.FullVersion != "":
 		// if the full version major version matches the java version major version, then use the full version
-		fullMajor := strings.Split(ri.FullVersion, ".")[0]
-		javaMajor := strings.Split(ri.JavaVersion, ".")[0]
+		fullMajor := trim0sFromLeft(strings.Split(ri.FullVersion, ".")[0])
+		javaMajor := trim0sFromLeft(strings.Split(ri.JavaVersion, ".")[0])
 		if fullMajor == javaMajor {
 			return ri.FullVersion
 		}
