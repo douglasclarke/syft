@@ -124,7 +124,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 				Licenses:  pkg.NewLicenseSet(),
 				Type:      pkg.BinaryPkg,
 				CPEs: []cpe.CPE{
-					cpe.Must("cpe:2.3:a:oracle:java_se:1.8.0:update411:*:*:*:*:*:*", cpe.DeclaredSource),
+					cpe.Must("cpe:2.3:a:oracle:java_se:8u411:*:*:*:*:*:*:*", cpe.DeclaredSource),
 					cpe.Must("cpe:2.3:a:oracle:jre:1.8.0:update411:*:*:*:*:*:*", cpe.DeclaredSource),
 					cpe.Must("cpe:2.3:a:oracle:jdk:1.8.0:update411:*:*:*:*:*:*", cpe.DeclaredSource),
 				},
@@ -214,7 +214,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 				Licenses:  pkg.NewLicenseSet(),
 				Type:      pkg.BinaryPkg,
 				CPEs: []cpe.CPE{
-					cpe.Must("cpe:2.3:a:oracle:java_se:1.8.0:update441:*:*:enterprise_performance_pack:*:*:*", cpe.DeclaredSource),
+					cpe.Must("cpe:2.3:a:oracle:java_se:8u441:*:*:*:enterprise_performance:*:*:*", cpe.DeclaredSource),
 					cpe.Must("cpe:2.3:a:oracle:jre:1.8.0:update441:*:*:enterprise_performance_pack:*:*:*", cpe.DeclaredSource),
 					cpe.Must("cpe:2.3:a:oracle:jdk:1.8.0:update441:*:*:enterprise_performance_pack:*:*:*", cpe.DeclaredSource)},
 				PURL: "pkg:generic/oracle/jdk-8-perf@8u441?arch=amd64&distro=2.6&os=Linux",
@@ -245,7 +245,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 				Licenses:  pkg.NewLicenseSet(),
 				Type:      pkg.BinaryPkg,
 				CPEs: []cpe.CPE{
-					cpe.Must("cpe:2.3:a:oracle:graalvm:22.3.0:*:*:*:community:*:*:*", cpe.DeclaredSource)},
+					cpe.Must("cpe:2.3:a:oracle:graalvm:22.3.0:*:17:*:community:*:*:*", cpe.DeclaredSource)},
 				PURL: "pkg:generic/oracle/graalvm22-ce-17-jdk@22.3.0?arch=aarch64&os=Linux",
 				Metadata: pkg.JavaVMInstallation{
 					Release: pkg.JavaVMRelease{
