@@ -1275,7 +1275,7 @@
         "buildType": {
           "type": "string"
         },
-        "CustomFields": {
+        "customFields": {
           "patternProperties": {
             ".*": {
               "type": "string"
@@ -1284,10 +1284,7 @@
           "type": "object"
         }
       },
-      "type": "object",
-      "required": [
-        "CustomFields"
-      ]
+      "type": "object"
     },
     "JavascriptNpmPackage": {
       "properties": {

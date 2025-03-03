@@ -616,7 +616,12 @@ func TestIdentifyJvm(t *testing.T) {
 				vendor:      "oracle",
 				purlProduct: "jdk-8",
 				version:     "8u411",
-				cpeInfos:    buildCpeInfos(oracleVendor, []string{"java_se", jre, jdk}, "1.8.0_411-b25", "", ""),
+				cpeInfos: []jvmCpeInfo{
+					{vendor: oracleVendor, product: oracleJavaSeProduct, version: "8u411"},
+					{vendor: oracleVendor, product: jre, version: "1.8.0", update: "411"},
+					{vendor: oracleVendor, product: jdk, version: "1.8.0", update: "411"},
+				},
+				//cpeInfos:    buildCpeInfos(oracleVendor, []string{"java_se", jre, jdk}, "1.8.0_411-b25", "", ""),
 			},
 		},
 		{
@@ -685,7 +690,7 @@ func TestIdentifyJvm(t *testing.T) {
 				vendor:      "oracle",
 				purlProduct: "jdk-21",
 				version:     "21.0.6+8-LTS-188",
-				cpeInfos:    buildCpeInfos(oracleVendor, []string{"java_se", jre, jdk}, "21.0.6+8-LTS-188", "", ""),
+				cpeInfos:    buildCpeInfos(oracleVendor, []string{oracleJavaSeProduct, jre, jdk}, "21.0.6", "", ""),
 			},
 		},
 		{
@@ -700,7 +705,11 @@ func TestIdentifyJvm(t *testing.T) {
 				vendor:      "oracle",
 				purlProduct: "jdk-8",
 				version:     "8u411",
-				cpeInfos:    buildCpeInfos(oracleVendor, []string{"java_se", jre, jdk}, "1.8.0_411", "", ""),
+				cpeInfos: []jvmCpeInfo{
+					{vendor: oracleVendor, product: oracleJavaSeProduct, version: "8u411"},
+					{vendor: oracleVendor, product: jre, version: "1.8.0", update: "411"},
+					{vendor: oracleVendor, product: jdk, version: "1.8.0", update: "411"},
+				},
 			},
 		},
 		{
