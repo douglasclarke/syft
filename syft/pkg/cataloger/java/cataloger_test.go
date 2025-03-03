@@ -114,7 +114,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 		expected pkg.Package
 	}{
 		{
-			name:    "valid 1.8.0",
+			name:    "OracleJDK 1.8.0_411",
 			fixture: "test-fixtures/jvm-installs/oracle-jdk-se-8",
 			expected: pkg.Package{
 				Name:      "jdk-8",
@@ -228,6 +228,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 						BuildType:          "commercial",
 					},
 					Files: []string{
+						"bin/javac",
 						"release",
 					},
 				},
@@ -272,7 +273,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 				Licenses:  pkg.NewLicenseSet(),
 				Type:      pkg.BinaryPkg,
 				CPEs: []cpe.CPE{
-					cpe.Must("cpe:2.3:a:oracle:graalvm:21.3.9:*:*:*:enterprise:*:*:*", cpe.DeclaredSource)},
+					cpe.Must("cpe:2.3:a:oracle:graalvm:21.3.9:*:11:*:enterprise:*:*:*", cpe.DeclaredSource)},
 				PURL: "pkg:generic/oracle/graalvm21-ee-11-jdk@21.3.9?arch=x86_64&os=Linux",
 				Metadata: pkg.JavaVMInstallation{
 					Release: pkg.JavaVMRelease{
