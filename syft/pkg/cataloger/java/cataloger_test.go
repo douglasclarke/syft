@@ -245,7 +245,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 				Licenses:  pkg.NewLicenseSet(),
 				Type:      pkg.BinaryPkg,
 				CPEs: []cpe.CPE{
-					cpe.Must("cpe:2.3:a:oracle:graalvm:22.3.0:*:17:*:community:*:*:*", cpe.DeclaredSource)},
+					cpe.Must("cpe:2.3:a:oracle:graalvm:22.3.0:*:*:*:community:*:*:*", cpe.DeclaredSource)},
 				PURL: "pkg:generic/oracle/graalvm22-ce-17-jdk@22.3.0?arch=aarch64&os=Linux",
 				Metadata: pkg.JavaVMInstallation{
 					Release: pkg.JavaVMRelease{
@@ -258,6 +258,33 @@ func TestJvmDistributionCataloger(t *testing.T) {
 					},
 					Files: []string{
 						"release",
+					},
+				},
+			},
+		},
+		{
+			name:    "Oracle GraalVM Enterprise Edition 19.3.6 for JDK 11",
+			fixture: "test-fixtures/jvm-installs/graalvm-ee-java11-19.3.6",
+			expected: pkg.Package{
+				Name:      "graalvm19-ee-11-jdk",
+				Version:   "19.3.6",
+				FoundBy:   "java-jvm-cataloger",
+				Locations: file.NewLocationSet(file.NewLocation("graalvm-ee-java11-19.3.6/release")),
+				Licenses:  pkg.NewLicenseSet(),
+				Type:      pkg.BinaryPkg,
+				CPEs: []cpe.CPE{
+					cpe.Must("cpe:2.3:a:oracle:graalvm:19.3.6:*:11:*:enterprise:*:*:*", cpe.DeclaredSource)},
+				PURL: "pkg:generic/oracle/graalvm19-ee-11-jdk@19.3.6?arch=amd64&os=linux",
+				Metadata: pkg.JavaVMInstallation{
+					Release: pkg.JavaVMRelease{
+						OsArch: "amd64",
+						OsName: "linux",
+						CustomFields: map[string]string{
+							graalVMVersionField: "19.3.6",
+							"component_catalog": "component_catalog=uln://linux-update.oracle.com/rpc/api/?linux=ol7_x86_64_graalvm_core&macos=macos_64_graalvm|https://www.graalvm.org/component-catalog/otn-yum-component-catalog-java11.properties|https://www.graalvm.org/component-catalog/graal-updater-ee-component-catalog-java11.properties"},
+					},
+					Files: []string{
+						"graalvm-ee-java11-19.3.6/release",
 					},
 				},
 			},
