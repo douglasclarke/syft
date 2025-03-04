@@ -340,6 +340,29 @@ func TestJvmCpes(t *testing.T) {
 			},
 		},
 		{
+			name:          "GraalVM CE 23.0.2 GV 24.1.2",
+			path:          "graalvm-community-openjdk-23.0.2+7.1",
+			hasJdk:        true,
+			primaryVendor: "oracle",
+			pkgVersion:    "23.0.2",
+			product:       "graalvm-ce-23-jdk",
+			cpeInfos: []jvmCpeInfo{
+				{vendor: oracleVendor, product: graalVMProduct, version: "23.0.2", swEdition: "community"},
+			},
+			expected: []cpe.CPE{
+				{
+					Attributes: cpe.Attributes{
+						Part:      "a",
+						Vendor:    "oracle",
+						Product:   "graalvm",
+						Version:   "23.0.2",
+						SWEdition: "community",
+					},
+					Source: cpe.DeclaredSource,
+				},
+			},
+		},
+		{
 			name:          "Oracle GraalVM EE 19.3.6 for Java 8",
 			pkgVersion:    "19.3.6",
 			primaryVendor: "oracle",
@@ -403,6 +426,38 @@ func TestJvmCpes(t *testing.T) {
 						Version:   "21.3.9",
 						Edition:   "11",
 						SWEdition: "enterprise",
+					},
+					Source: cpe.DeclaredSource,
+				},
+			},
+		},
+		{
+			name:          "Oracle GraalVM for JDK 22.0.1",
+			path:          "graalvm-jdk-22.0.1+8.1",
+			hasJdk:        true,
+			primaryVendor: oracleVendor,
+			product:       "graalvm-22-jdk",
+			pkgVersion:    "22.0.1",
+			cpeInfos: []jvmCpeInfo{
+				{vendor: oracleVendor, product: graalVMProduct, version: "22.0.1"},
+				{vendor: oracleVendor, product: "graalvm_for_jdk", version: "22.0.1"},
+			},
+			expected: []cpe.CPE{
+				{
+					Attributes: cpe.Attributes{
+						Part:    "a",
+						Vendor:  "oracle",
+						Product: "graalvm",
+						Version: "22.0.1",
+					},
+					Source: cpe.DeclaredSource,
+				},
+				{
+					Attributes: cpe.Attributes{
+						Part:    "a",
+						Vendor:  "oracle",
+						Product: "graalvm_for_jdk",
+						Version: "22.0.1",
 					},
 					Source: cpe.DeclaredSource,
 				},
@@ -532,7 +587,7 @@ func TestGetJVMVersionAndUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, ver, update := getJVMFamilyVersionAndUpdate(tt.version)
+			_, ver, update := jvmFamilyVersionAndUpdate(tt.version)
 			assert.Equal(t, tt.expectedVer, ver)
 			assert.Equal(t, tt.expectedUpdate, update)
 		})
@@ -541,7 +596,7 @@ func TestGetJVMVersionAndUpdate(t *testing.T) {
 
 // Create consistent vendor jvmCpeInfo to simplify test case setup
 func buildCpeInfos(vendor string, products []string, version, edition, swEdition string) []jvmCpeInfo {
-	_, cpeVersion, update := getJVMFamilyVersionAndUpdate(version)
+	_, cpeVersion, update := jvmFamilyVersionAndUpdate(version)
 	cpeInfos := []jvmCpeInfo{}
 	for _, prod := range products {
 		cpeInfos = append(cpeInfos, jvmCpeInfo{vendor: vendor, product: prod, version: cpeVersion, update: update, edition: edition, swEdition: swEdition})
@@ -713,7 +768,7 @@ func TestIdentifyJvm(t *testing.T) {
 			},
 		},
 		{
-			name: "GraalVM CE",
+			name: "GraalVM CE 21.0.0",
 			ri: &pkg.JavaVMRelease{
 				Implementor:  "GraalVM Community",
 				JavaVersion:  "21.0.0",
@@ -723,11 +778,28 @@ func TestIdentifyJvm(t *testing.T) {
 				vendor:      "oracle",
 				purlProduct: "graalvm22-ce-21-jdk",
 				version:     "22.0.0",
-				cpeInfos:    buildCpeInfos(oracleVendor, []string{graalVMProduct}, "22.0.0", "21", "community"),
+				cpeInfos:    buildCpeInfos(oracleVendor, []string{graalVMProduct}, "22.0.0", "", "community"),
 			},
 		},
 		{
-			name: "GraalVM EE",
+			name: "GraalVM CE 23.0.2 GV 24.1.2",
+			path: "graalvm-community-openjdk-23.0.2+7.1/release",
+			ri: &pkg.JavaVMRelease{
+				Implementor:        "GraalVM Community",
+				JavaRuntimeVersion: "23.0.2+7-jvmci-b01",
+				JavaVersion:        "23.0.2",
+				JavaVersionDate:    "2025-01-21",
+				CustomFields:       map[string]string{graalVMVersionField: "24.1.2"},
+			},
+			expectedConfig: jvmConfiguration{
+				vendor:      "oracle",
+				purlProduct: "graalvm-ce-23-jdk",
+				version:     "23.0.2",
+				cpeInfos:    buildCpeInfos(oracleVendor, []string{graalVMProduct}, "23.0.2", "", "community"),
+			},
+		},
+		{
+			name: "GraalVM EE 22.0.0",
 			ri: &pkg.JavaVMRelease{
 				Implementor:  "Oracle Corporation",
 				JavaVersion:  "21.0.0",
@@ -741,7 +813,7 @@ func TestIdentifyJvm(t *testing.T) {
 			},
 		},
 		{
-			name: "GraalVM for JDK",
+			name: "GraalVM for JDK 23.1.0",
 			ri: &pkg.JavaVMRelease{
 				Implementor:  "Oracle Corporation",
 				JavaVersion:  "23.1.0",
@@ -750,8 +822,8 @@ func TestIdentifyJvm(t *testing.T) {
 			expectedConfig: jvmConfiguration{
 				vendor:      "oracle",
 				purlProduct: "graalvm-23-jdk",
-				version:     "24.0.0",
-				cpeInfos:    buildCpeInfos(oracleVendor, []string{graalVMProduct}, "24.0.0", "23", ""),
+				version:     "23.1.0",
+				cpeInfos:    buildCpeInfos(oracleVendor, []string{"graalvm_for_jdk"}, "23.1.0", "23", ""),
 			},
 		},
 	}
@@ -788,7 +860,7 @@ func TestJvmPurl(t *testing.T) {
 			expectedPURL: "pkg:generic/oracle/openjdk@21.0.4?repository_url=https%3A%2F%2Fgithub.com%2Fadoptium%2Ftemurin-build.git",
 		},
 		{
-			name: "valid 1.8.0",
+			name: "OracleJDK 1.8.0_411",
 			ri: pkg.JavaVMRelease{
 				JavaRuntimeVersion: "1.8.0_411-b25",
 				JavaVersion:        "1.8.0_411",
@@ -896,16 +968,77 @@ func TestJvmPurl(t *testing.T) {
 			},
 			expectedPURL: "pkg:generic/oracle/jdk-23@23.0.2%2B7-58?arch=aarch64&os=Linux",
 		},
-		// Oracle GraalVM EE and for JDK releases
+		// Oracle GraalVM CE, EE and for JDK releases
+		{
+			name: "GraalVM for JDK 23 Community 23.0.2",
+			ri: pkg.JavaVMRelease{
+				Implementor:        "GraalVM Community",
+				JavaRuntimeVersion: "23.0.2+7-jvmci-b01",
+				JavaVersion:        "23.0.2",
+				JavaVersionDate:    "2025-01-21",
+				Libc:               "gnu",
+				OsArch:             "aarch64",
+				OsName:             "Linux",
+				CustomFields:       map[string]string{graalVMVersionField: "24.1.2"},
+			},
+			path:         "graalvm-community-openjdk-23.0.2+7.1/release ",
+			expectedPURL: "pkg:generic/oracle/graalvm-ce-23-jdk@23.0.2?arch=aarch64&os=Linux",
+		},
+		{
+			name: "GraalVM for JDK 17.0.12",
+			ri: pkg.JavaVMRelease{
+				Implementor:        "Oracle Corporation",
+				JavaRuntimeVersion: "17.0.12+8-LTS-jvmci-23.0-b41",
+				JavaVersion:        "17.0.12",
+				JavaVersionDate:    "2024-07-16",
+				Libc:               "gnu",
+				OsArch:             "x86_64",
+				OsName:             "Linux",
+				CustomFields: map[string]string{
+					graalVMVersionField: "23.0.5",
+					"GDS_PRODUCT_ID":    "D53FAE8052773FFAE0530F15000AA6C6"},
+			},
+			path:         "graalvm-jdk-17.0.12+8.1/release",
+			expectedPURL: "pkg:generic/oracle/graalvm-17-jdk@17.0.12?arch=x86_64&os=Linux",
+		},
+		{
+			name: "Oracle GraalVM for JDK 21.0.6",
+			ri: pkg.JavaVMRelease{
+				Implementor:        "Oracle Corporation",
+				JavaRuntimeVersion: "21.0.6+8-LTS-jvmci-23.1-b55",
+				JavaVersion:        "21.0.6",
+				JavaVersionDate:    "2025-01-21",
+				Libc:               "gnu",
+				OsArch:             "aarch64",
+				OsName:             "Linux",
+				CustomFields:       map[string]string{graalVMVersionField: "23.1.6"},
+			},
+			path:         "graalvm-jdk-21.0.6+8.1/release",
+			expectedPURL: "pkg:generic/oracle/graalvm-21-jdk@21.0.6?arch=aarch64&os=Linux",
+		},
 		{
 			name: "Oracle GraalVM EE 19.3.6 for JDK 11",
 			ri: pkg.JavaVMRelease{
-				OsArch:       "amd64",
-				OsName:       "Linux",
-				CustomFields: map[string]string{graalVMVersionField: "19.3.6"},
+				OsArch: "amd64",
+				OsName: "Linux",
+				CustomFields: map[string]string{
+					graalVMVersionField: "19.3.6",
+					"component_catalog": "uln://linux-update.oracle.com/rpc/api/?linux=ol7_x86_64_graalvm_core&macos=macos_64_graalvm|https://www.graalvm.org/component-catalog/otn-yum-component-catalog-java11.properties|https://www.graalvm.org/component-catalog/graal-updater-ee-component-catalog-java11.properties",
+				},
 			},
-			path:         "graalvm-ee-java11-19.3.6/release",
 			expectedPURL: "pkg:generic/oracle/graalvm19-ee-11-jdk@19.3.6?arch=amd64&os=Linux",
+		},
+		{
+			name: "Oracle GraalVM EE 19.3.6 for JDK 8",
+			ri: pkg.JavaVMRelease{
+				OsArch: "amd64",
+				OsName: "Linux",
+				CustomFields: map[string]string{
+					graalVMVersionField: "19.3.6",
+					"component_catalog": "uln://linux-update.oracle.com/rpc/api/?linux=ol7_x86_64_graalvm_core&macos=macos_64_graalvm|https://www.graalvm.org/component-catalog/otn-yum-component-catalog-java8.properties|https://www.graalvm.org/component-catalog/graal-updater-ee-component-catalog-java8.properties",
+				},
+			},
+			expectedPURL: "pkg:generic/oracle/graalvm19-ee-8-jdk@19.3.6?arch=amd64&os=Linux",
 		},
 		{
 			name: "Oracle GraalVM EE 21.3.9 for JDK 11",
