@@ -13,3 +13,7 @@ A cataloger contributed by Axis Communications that catalogs packages resolved b
 ## Bitnami Packages
 
 A cataloger contributed by Bitnami developer that catalogs packages described in Bitnami SBOMs.
+
+## OracleJDK enhancemenst to JVM Release Cataloger
+
+Existing JVM release cataloger (syft/pkg/cataloger/java/parse_jvm_release.go) enhanced to address Oracle's OpenJDK, OracleJDK/JavaSE, and GraalVM releases.
