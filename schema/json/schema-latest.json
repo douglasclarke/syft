@@ -1274,14 +1274,6 @@
         },
         "buildType": {
           "type": "string"
-        },
-        "customFields": {
-          "patternProperties": {
-            ".*": {
-              "type": "string"
-            }
-          },
-          "type": "object"
         }
       },
       "type": "object"
