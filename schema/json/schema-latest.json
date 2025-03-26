@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "anchore.io/schema/syft/json/16.0.23/document",
+  "$id": "anchore.io/schema/syft/json/16.0.24/document",
   "$ref": "#/$defs/Document",
   "$defs": {
     "AlpmDbEntry": {
@@ -1274,6 +1274,14 @@
         },
         "buildType": {
           "type": "string"
+        },
+        "customFields": {
+          "patternProperties": {
+            ".*": {
+              "type": "string"
+            }
+          },
+          "type": "object"
         }
       },
       "type": "object"
