@@ -245,7 +245,7 @@ func identifyGraalVM(ri *pkg.JavaVMRelease, path string, hasJdk bool) jvmConfigu
 	if ri.Implementor == graalVMCommunityImplementor {
 		graalCpeSWEdition, graalEditionCode = graalVMCommunityEdition, "-ce"
 		cpeEdition = ""
-	} else if graalFamily >= 23 { // Not community, therefore Oracle GraalVM and > 23 is "for JDK" without -ee or sw editition
+	} else if graalFamily >= 23 { // Not community, therefore Oracle GraalVM and > 23 is "for JDK" without -ee or sw edition
 		graalEditionCode, graalCpeSWEdition = "", ""
 	}
 	if graalFamily >= 23 { // all editions starting with 23.x rely on the Java version and no longer report the graal version in the product name
