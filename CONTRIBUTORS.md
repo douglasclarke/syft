@@ -13,3 +13,7 @@ A cataloger contributed by Axis Communications that catalogs packages resolved b
 ## Bitnami Packages
 
 A cataloger contributed by Bitnami developer that catalogs packages described in Bitnami SBOMs.
+
+## Oracle JVM Release
+
+Enhanced parse_jvm_release cataloger by Oracle Corporation to address OracleJDK and GraalVM releases.
