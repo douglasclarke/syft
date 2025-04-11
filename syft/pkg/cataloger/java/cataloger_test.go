@@ -283,7 +283,6 @@ func TestJvmDistributionCataloger(t *testing.T) {
 						ComponentCatalog: "component_catalog=uln://linux-update.oracle.com/rpc/api/?linux=ol7_x86_64_graalvm_core&macos=macos_64_graalvm|https://www.graalvm.org/component-catalog/otn-yum-component-catalog-java11.properties|https://www.graalvm.org/component-catalog/graal-updater-ee-component-catalog-java11.properties",
 					},
 					Files: []string{
-						"graalvm-ee-java11-19.3.6/bin/javac",
 						"graalvm-ee-java11-19.3.6/release",
 					},
 				},
@@ -315,7 +314,6 @@ func TestJvmDistributionCataloger(t *testing.T) {
 						BuildType:          "commercial",
 					},
 					Files: []string{
-						"bin/javac",
 						"release",
 					},
 				},
