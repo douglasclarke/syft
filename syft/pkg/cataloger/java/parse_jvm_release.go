@@ -197,12 +197,6 @@ func (config jvmConfiguration) jvmPurl() string {
 			Value: ri.OsName,
 		})
 	}
-	if ri.OsVersion != "" {
-		qualifiers = append(qualifiers, packageurl.Qualifier{
-			Key:   "distro",
-			Value: ri.OsVersion,
-		})
-	}
 
 	pURL := packageurl.NewPackageURL(
 		packageurl.TypeGeneric,
@@ -237,7 +231,7 @@ func identifyGraalVM(ri *pkg.JavaVMRelease, path string, hasJdk bool) jvmConfigu
 	if componentCatalog != "" && javaFamily == 0 {
 		match := graalJavaPropertiesRegEx.FindStringSubmatch(componentCatalog)
 		if len(match) == 2 {
-			javaFamily, _ = strconv.Atoi(match[1])
+			javaFamily, _ = strconv.Atoi(match[1]) // TODO: Error handling?
 		} else { // Could not determine java family for GraalVM release, use graal version's family.
 			javaFamily = graalFamily
 		}
@@ -349,7 +343,7 @@ func identifyJvm(ri *pkg.JavaVMRelease, path string, hasJdk bool) jvmConfigurati
 			cpeInfos: cpeInfos, path: path, hasJdk: hasJdk}
 	}
 
-	// GraalVM
+	// Oracle GraalVM
 	if ri.GraalVMVersion != "" || strings.Contains(implementor, graalVMProduct) ||
 		strings.Contains(path, graalVMProduct) {
 		return identifyGraalVM(ri, path, hasJdk)
@@ -419,15 +413,16 @@ func jvmFamilyVersionAndUpdate(version string) (int, string, string) {
 	var javaFamily int
 	versionSplit := strings.Split(versionUnderscoreSplit[0], ".")
 	if len(versionSplit) >= 1 {
-		javaFamily, _ = strconv.Atoi(versionSplit[0])
+		javaFamily, _ = strconv.Atoi(versionSplit[0]) // TODO error handling?
 		if javaFamily == 1 && len(versionSplit) > 1 {
-			javaFamily, _ = strconv.Atoi(versionSplit[1])
+			javaFamily, _ = strconv.Atoi(versionSplit[1]) // TODO error handling?
 		}
 	}
 
 	versionStr := strings.Split(versionUnderscoreSplit[0], "-")[0]
 
 	// this could be a legacy or modern string that does not have an update
+	// TODO handle parsing failures and what might happen with zero is returned
 	return javaFamily, versionStr, update
 }
 
@@ -509,7 +504,7 @@ func jvmPackageVersion(ri *pkg.JavaVMRelease) string {
 		return ri.JavaRuntimeVersion
 	case ri.FullVersion != "":
 		// if the full version major version matches the java version major version, then use the full version
-		fullMajor := trim0sFromLeft(strings.Split(ri.FullVersion, ".")[0])
+		fullMajor := trim0sFromLeft(strings.Split(ri.FullVersion, ".")[0]) // TODO Why this change? Document motivation for it or revert.
 		javaMajor := trim0sFromLeft(strings.Split(ri.JavaVersion, ".")[0])
 		if fullMajor == javaMajor {
 			return ri.FullVersion

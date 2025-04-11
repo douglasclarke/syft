@@ -128,7 +128,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 					cpe.Must("cpe:2.3:a:oracle:jre:1.8.0:update411:*:*:*:*:*:*", cpe.DeclaredSource),
 					cpe.Must("cpe:2.3:a:oracle:jdk:1.8.0:update411:*:*:*:*:*:*", cpe.DeclaredSource),
 				},
-				PURL: "pkg:generic/oracle/jdk-8@8u411?arch=amd64&distro=2.6&os=Linux",
+				PURL: "pkg:generic/oracle/jdk-8@8u411?arch=amd64&os=Linux",
 				Metadata: pkg.JavaVMInstallation{
 					Release: pkg.JavaVMRelease{
 						JavaRuntimeVersion: "1.8.0_411-b25",
@@ -217,7 +217,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 					cpe.Must("cpe:2.3:a:oracle:java_se:8u441:*:*:*:enterprise_performance:*:*:*", cpe.DeclaredSource),
 					cpe.Must("cpe:2.3:a:oracle:jre:1.8.0:update441:*:*:enterprise_performance_pack:*:*:*", cpe.DeclaredSource),
 					cpe.Must("cpe:2.3:a:oracle:jdk:1.8.0:update441:*:*:enterprise_performance_pack:*:*:*", cpe.DeclaredSource)},
-				PURL: "pkg:generic/oracle/jdk-8-perf@8u441?arch=amd64&distro=2.6&os=Linux",
+				PURL: "pkg:generic/oracle/jdk-8-perf@8u441?arch=amd64&os=Linux",
 				Metadata: pkg.JavaVMInstallation{
 					Release: pkg.JavaVMRelease{
 						JavaRuntimeVersion: "1.8.0_441-perf-46-b09",
@@ -283,6 +283,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 						ComponentCatalog: "component_catalog=uln://linux-update.oracle.com/rpc/api/?linux=ol7_x86_64_graalvm_core&macos=macos_64_graalvm|https://www.graalvm.org/component-catalog/otn-yum-component-catalog-java11.properties|https://www.graalvm.org/component-catalog/graal-updater-ee-component-catalog-java11.properties",
 					},
 					Files: []string{
+						"graalvm-ee-java11-19.3.6/bin/javac",
 						"graalvm-ee-java11-19.3.6/release",
 					},
 				},
@@ -314,6 +315,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 						BuildType:          "commercial",
 					},
 					Files: []string{
+						"bin/javac",
 						"release",
 					},
 				},

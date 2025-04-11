@@ -538,48 +538,56 @@ func TestGetJVMVersionAndUpdate(t *testing.T) {
 	tests := []struct {
 		name           string
 		version        string
+		expectedFamily int
 		expectedVer    string
 		expectedUpdate string
 	}{
 		{
 			name:           "legacy version with underscore and build",
 			version:        "1.8.0_302-b08",
+			expectedFamily: 8,
 			expectedVer:    "1.8.0",
 			expectedUpdate: "302",
 		},
 		{
 			name:           "legacy version with underscore but no build",
 			version:        "1.8.0_302",
+			expectedFamily: 8,
 			expectedVer:    "1.8.0",
 			expectedUpdate: "302",
 		},
 		{
 			name:           "JEP 223 version with plus sign",
 			version:        "9.0.1+20",
+			expectedFamily: 9,
 			expectedVer:    "9.0.1",
 			expectedUpdate: "",
 		},
 		{
 			name:           "JEP 223 version with plus but no update",
 			version:        "11.0.9+",
+			expectedFamily: 11,
 			expectedVer:    "11.0.9",
 			expectedUpdate: "",
 		},
 		{
 			name:           "modern version without plus or underscore",
 			version:        "11.0.9",
+			expectedFamily: 11,
 			expectedVer:    "11.0.9",
 			expectedUpdate: "",
 		},
 		{
 			name:           "legacy version without underscore or plus",
 			version:        "1.7.0",
+			expectedFamily: 7,
 			expectedVer:    "1.7.0",
 			expectedUpdate: "",
 		},
 		{
 			name:           "empty version string",
 			version:        "",
+			expectedFamily: 0,
 			expectedVer:    "",
 			expectedUpdate: "",
 		},
@@ -587,7 +595,8 @@ func TestGetJVMVersionAndUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, ver, update := jvmFamilyVersionAndUpdate(tt.version)
+			family, ver, update := jvmFamilyVersionAndUpdate(tt.version)
+			assert.Equal(t, tt.expectedFamily, family)
 			assert.Equal(t, tt.expectedVer, ver)
 			assert.Equal(t, tt.expectedUpdate, update)
 		})
@@ -870,7 +879,7 @@ func TestJvmPurl(t *testing.T) {
 				Source:             ".:git:71ec2089cf8c+",
 				BuildType:          "commercial",
 			},
-			expectedPURL: "pkg:generic/oracle/jdk-8@8u411?arch=amd64&distro=2.6&os=Linux",
+			expectedPURL: "pkg:generic/oracle/jdk-8@8u411?arch=amd64&os=Linux",
 		},
 		{
 			name: "source repo provided, no build source repo",
@@ -925,7 +934,7 @@ func TestJvmPurl(t *testing.T) {
 				Source:             ".:git:fc007cccb4cf",
 				BuildType:          "commercial",
 			},
-			expectedPURL: "pkg:generic/oracle/jdk-8@8u431?arch=aarch64&distro=2.6&os=Linux",
+			expectedPURL: "pkg:generic/oracle/jdk-8@8u431?arch=aarch64&os=Linux",
 		},
 		{
 			name: "OracleJDK Java 8 Enterprise Performance Pack",
@@ -937,7 +946,7 @@ func TestJvmPurl(t *testing.T) {
 				OsName:             "Linux",
 				BuildType:          "commercial",
 			},
-			expectedPURL: "pkg:generic/oracle/jdk-8-perf@8u441?arch=amd64&distro=2.6&os=Linux",
+			expectedPURL: "pkg:generic/oracle/jdk-8-perf@8u441?arch=amd64&os=Linux",
 		},
 		{
 			name: "OracleJDK 21.0.6", // https://www.oracle.com/java/technologies/downloads/#java21
