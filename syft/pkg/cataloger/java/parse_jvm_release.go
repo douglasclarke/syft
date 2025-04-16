@@ -3,6 +3,7 @@ package java
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -54,8 +55,6 @@ const (
 	graalVMCommunityImplementor    = "GraalVM Community"
 )
 
-var oracleJdkSourceIndicators = []string{"graal", " open:git:"}
-
 // the /opt/java/openjdk/release file (and similar paths) is a file that is present in the multiple OpenJDK distributions
 // here's an example of the contents of the file:
 //
@@ -98,15 +97,23 @@ type jvmConfiguration struct {
 	cpeInfos                     []jvmCpeInfo
 }
 
+// JvmVersionInfo represents the Java Family (eg 8, 11,17, 21, 23), the version (JEP 223, MAJOR.MINOR.SECURITY),
+// and the update value extracted from a full JVM version string
+type jvmVersionInfo struct {
+	version        string
+	family         int
+	baseVersion    string
+	update         string
+	graalvmFamily  int
+	graalVMVersion string
+}
+
 func parseJVMRelease(_ context.Context, resolver file.Resolver, _ *generic.Environment, reader file.LocationReadCloser) ([]pkg.Package, []artifact.Relationship, error) {
 	ri, err := parseJvmReleaseInfo(reader)
-	if err != nil {
-		return nil, nil, fmt.Errorf("unable to parse JVM release info %q: %w", reader.Path(), err)
-	}
 
-	if ri == nil {
-		// TODO: known-unknown: expected JDK installation package
-		return nil, nil, nil
+	if err != nil || ri == nil {
+		log.WithFields("error", err, "jvmReleaseInfo", reader.Path()).Debug("error while reading JVM release info")
+		return nil, nil, fmt.Errorf("unable to parse JVM release info %q: %w", reader.Path(), err)
 	}
 
 	licenses := jvmLicenses(resolver, ri)
@@ -120,7 +127,11 @@ func parseJVMRelease(_ context.Context, resolver file.Resolver, _ *generic.Envir
 	installDir := path.Dir(reader.Path())
 	files, hasJdk := findJvmFiles(resolver, installDir)
 
-	config := identifyJvm(ri, reader.Path(), hasJdk)
+	config, err := identifyJvm(ri, reader.Path(), hasJdk)
+	if err != nil {
+		log.WithFields("error", err, "jvmReleaseInfo", reader.Path()).Debug("error identifying JVM release ")
+		return nil, nil, fmt.Errorf("unable to identify JVM release info %q: %w", reader.Path(), err)
+	}
 
 	p := pkg.Package{
 		Name:      config.purlProduct,
@@ -208,7 +219,7 @@ func (config jvmConfiguration) jvmPurl() string {
 	return pURL.ToString()
 }
 
-var graalJavaPropertiesRegEx = regexp.MustCompile("graal-updater-ee-component-catalog-java(8|11).properties")
+var graalJavaPropertiesRegEx = regexp.MustCompile("graal-updater-ee-component-catalog-java(8|11)\\.properties")
 
 // Identify the GraalVM install based on the release file contents. The product naming and CPE info is contextual on
 // community versus enterprise as well as changing naming as of GRAAL_VERSION 23.0.0 in both editions.
@@ -217,44 +228,36 @@ var graalJavaPropertiesRegEx = regexp.MustCompile("graal-updater-ee-component-ca
 // cpe:2.3:a:oracle:graalvm:22.0.1:*:*:*:community:*:*:*
 // cpe:2.3:a:oracle:graalvm:21.3.12:*:*:*:enterprise:*:*:*
 // cpe:2.3:a:oracle:graalvm_for_jdk:17.0.13:*:*:*:*:*:*:*
-func identifyGraalVM(ri *pkg.JavaVMRelease, path string, hasJdk bool) jvmConfiguration {
-	graalCpeSWEdition, graalEditionCode := graalVMEnterpriseEdition, graalVMEnterpriseEditionSuffix
-	riVersion := jvmPackageVersion(ri)
-	javaFamily, javaVersion, _ := jvmFamilyVersionAndUpdate(riVersion)
-	graalFamily, graalVersion, _ := jvmFamilyVersionAndUpdate(ri.GraalVMVersion)
-	cpeEdition := fmt.Sprintf("%d", javaFamily)
-	graalFamilyStr := fmt.Sprintf("%d", graalFamily)
-	version := graalVersion
+func identifyGraalVM(ri *pkg.JavaVMRelease, versionInfo jvmVersionInfo, path string, hasJdk bool) *jvmConfiguration {
+	// Start with the assumption of GraalVM Enterprise Edition and then adjust in switch statement for variants
+	var graalCpeSWEdition, graalEditionCode string
+	cpeEdition := fmt.Sprintf("%d", versionInfo.family)
+	graalFamilyStr := fmt.Sprintf("%d", versionInfo.graalvmFamily)
+	version := versionInfo.graalVMVersion
 
-	// Handle special cases where no java values provided in release and need to infer from component_catalog having Java specific properties
-	componentCatalog := ri.ComponentCatalog
-	if componentCatalog != "" && javaFamily == 0 {
-		match := graalJavaPropertiesRegEx.FindStringSubmatch(componentCatalog)
-		if len(match) == 2 {
-			javaFamily, _ = strconv.Atoi(match[1]) // TODO: Error handling?
-		} else { // Could not determine java family for GraalVM release, use graal version's family.
-			javaFamily = graalFamily
-		}
-		cpeEdition = fmt.Sprintf("%d", javaFamily)
-	}
-
-	if ri.Implementor == graalVMCommunityImplementor {
-		graalCpeSWEdition, graalEditionCode = graalVMCommunityEdition, graalVMCommunityEditionSuffix
+	switch {
+	// GraalVM Enterprise Edition
+	case versionInfo.graalvmFamily < 23 && ri.Implementor != graalVMCommunityImplementor:
+		graalEditionCode, graalCpeSWEdition = graalVMEnterpriseEditionSuffix, graalVMEnterpriseEdition
+		// GraalVM Community Edition
+	case ri.Implementor == graalVMCommunityImplementor:
+		graalEditionCode, graalCpeSWEdition = graalVMCommunityEditionSuffix, graalVMCommunityEdition
 		cpeEdition = ""
-	} else if graalFamily >= 23 { // Not community, therefore Oracle GraalVM and > 23 is "for JDK" without -ee or sw edition
-		graalEditionCode, graalCpeSWEdition = "", ""
-	}
-	if graalFamily >= 23 { // all editions starting with 23.x rely on the Java version and no longer report the graal version in the product name
-		graalFamilyStr, version = "", javaVersion
+		fallthrough
+	default:
+		// GraalVM for JDK or >= 23 community
+		if versionInfo.graalvmFamily >= 23 {
+			graalFamilyStr, version = "", versionInfo.baseVersion
+		}
 	}
 
-	purlProduct := fmt.Sprintf("%s%s%s-%d-%s", graalVMProduct, graalFamilyStr, graalEditionCode, javaFamily, jdk)
+	purlProduct := fmt.Sprintf("%s%s%s-%d-%s", graalVMProduct, graalFamilyStr, graalEditionCode, versionInfo.family, jdk)
 	cpeProduct := graalVMProduct
-	if ri.Implementor != graalVMCommunityImplementor && graalFamily >= 23 {
+	if ri.Implementor != graalVMCommunityImplementor && versionInfo.graalvmFamily >= 23 {
 		cpeProduct = graalVMforJdkProduct
 	}
 	cpeInfos := []jvmCpeInfo{{vendor: oracleVendor, product: cpeProduct, version: version, edition: cpeEdition, swEdition: graalCpeSWEdition}}
-	return jvmConfiguration{ri: ri, vendor: oracleVendor, purlProduct: purlProduct, version: version, cpeInfos: cpeInfos, path: path, hasJdk: hasJdk}
+	return &jvmConfiguration{ri: ri, vendor: oracleVendor, purlProduct: purlProduct, version: version, cpeInfos: cpeInfos, path: path, hasJdk: hasJdk}
 }
 
 // Identify the Oracle JDK products
@@ -269,26 +272,24 @@ func identifyGraalVM(ri *pkg.JavaVMRelease, path string, hasJdk bool) jvmConfigu
 // pkg:generic/oracle/jdk-8-perf@8u431?arch=aarch64&distro=2.6&os=Linux
 // - cpe:2.3:a:oracle:java_se:8u431:*:*:*:enterprise_performance:*:*:*
 // - cpe:2.3:a:oracle:jdk:1.8.0:update345:*:*:enterprise_performance_pack:*:*:*
-func identifyOracleJDK(ri *pkg.JavaVMRelease, product, path string, hasJdk bool) jvmConfiguration {
-	jvmVersion := jvmPackageVersion(ri)
+func identifyOracleJDK(ri *pkg.JavaVMRelease, versionInfo jvmVersionInfo, product, path string, hasJdk bool) (*jvmConfiguration, error) {
 	purlProduct := product
-	purlVersion, cpeVersion, javaSEcpeVersion := jvmVersion, jvmVersion, jvmVersion
+	purlVersion, cpeVersion, javaSEcpeVersion := versionInfo.version, versionInfo.version, versionInfo.version
 	javaSEcpeSWEdition, jdkcpeSWEdition, cpeUpdate := "", "", ""
 
-	if jvmVersion != "" {
-		javaFamily, javaVersion, updateNumber := jvmFamilyVersionAndUpdate(jvmVersion)
-		cpeVersion, javaSEcpeVersion = javaVersion, javaVersion
+	if versionInfo.version != "" {
+		cpeVersion, javaSEcpeVersion = versionInfo.baseVersion, versionInfo.baseVersion
 
 		// Oracle JDK 1.8 and earlier use 8uXXX instead of 1.8.0_<UPDATE> versioning
-		if javaFamily <= 8 {
-			purlVersion = strconv.Itoa(javaFamily)
-			if updateNumber != "" {
-				purlVersion = fmt.Sprintf("%su%v", purlVersion, updateNumber)
-				javaSEcpeVersion, cpeUpdate = purlVersion, updateNumber
+		if versionInfo.family <= 8 {
+			purlVersion = strconv.Itoa(versionInfo.family)
+			if versionInfo.update != "" {
+				purlVersion = fmt.Sprintf("%su%v", purlVersion, versionInfo.update)
+				javaSEcpeVersion, cpeUpdate = purlVersion, versionInfo.update
 			}
 		}
-		if javaFamily != 0 {
-			purlProduct += fmt.Sprintf("-%d", javaFamily)
+		if versionInfo.family != 0 {
+			purlProduct += fmt.Sprintf("-%d", versionInfo.family)
 		}
 		// Handle Oracle -perf pack releases
 		if strings.Contains(ri.JavaRuntimeVersion, oraclePerfProduct) {
@@ -301,7 +302,7 @@ func identifyOracleJDK(ri *pkg.JavaVMRelease, product, path string, hasJdk bool)
 	cpeInfos = append(cpeInfos, jvmCpeInfo{vendor: oracleVendor, product: oracleJavaSeProduct, version: javaSEcpeVersion, swEdition: javaSEcpeSWEdition})
 	cpeInfos = append(cpeInfos, jvmCpeInfo{vendor: oracleVendor, product: jre, version: cpeVersion, update: cpeUpdate, swEdition: jdkcpeSWEdition})
 	cpeInfos = append(cpeInfos, jvmCpeInfo{vendor: oracleVendor, product: jdk, version: cpeVersion, update: cpeUpdate, swEdition: jdkcpeSWEdition})
-	return jvmConfiguration{ri: ri, vendor: oracleVendor, purlProduct: purlProduct, version: purlVersion, cpeInfos: cpeInfos, path: path, hasJdk: hasJdk}
+	return &jvmConfiguration{ri: ri, vendor: oracleVendor, purlProduct: purlProduct, version: purlVersion, cpeInfos: cpeInfos, path: path, hasJdk: hasJdk}, nil
 }
 
 func containsAny(text string, patterns []string) bool {
@@ -320,49 +321,55 @@ func containsAny(text string, patterns []string) bool {
 // cpe:2.3:a:oracle:openjdk:8:update362:*:*:*:*:*:*
 // cpe:2.3:a:oracle:openjdk:11.0.9:*:*:*:*:*:*:*
 // cpe:2.3:a:oracle:openjdk:20:*:*:*:*:*:*:*
-func identifyJvm(ri *pkg.JavaVMRelease, path string, hasJdk bool) jvmConfiguration {
+func identifyJvm(ri *pkg.JavaVMRelease, path string, hasJdk bool) (*jvmConfiguration, error) {
 	implementor := strings.ReplaceAll(strings.ToLower(ri.Implementor), " ", "")
 	defaultProduct := jvmProjectByType(ri.ImageType, hasJdk)
-	version := jvmPackageVersion(ri)
-	javaFamily, javaVersion, cpeUpdate := jvmFamilyVersionAndUpdate(version)
+	versionInfo, verErr := versionInfo(ri)
+	if verErr != nil {
+		return nil, verErr
+	}
 
 	// AZUL
 	if strings.Contains(implementor, azulVendor) || strings.Contains(path, zuluProduct) {
 		cpeInfos := []jvmCpeInfo{
-			{vendor: azulVendor, product: zuluProduct, version: javaVersion},
-			{vendor: oracleVendor, product: openJdkProduct, version: javaVersion},
+			{vendor: azulVendor, product: zuluProduct, version: versionInfo.baseVersion},
+			{vendor: oracleVendor, product: openJdkProduct, version: versionInfo.baseVersion},
 		}
-		return jvmConfiguration{ri: ri, vendor: azulVendor, purlProduct: zuluProduct, version: version,
-			cpeInfos: cpeInfos, path: path, hasJdk: hasJdk}
+		return &jvmConfiguration{ri: ri, vendor: azulVendor, purlProduct: zuluProduct, version: versionInfo.version,
+			cpeInfos: cpeInfos, path: path, hasJdk: hasJdk}, nil
 	}
 
 	// SUN
 	if strings.Contains(implementor, sunVendor) {
-		cpeInfos := []jvmCpeInfo{{vendor: sunVendor, product: defaultProduct, version: javaVersion}}
-		return jvmConfiguration{ri: ri, vendor: sunVendor, purlProduct: defaultProduct, version: version,
-			cpeInfos: cpeInfos, path: path, hasJdk: hasJdk}
+		cpeInfos := []jvmCpeInfo{{vendor: sunVendor, product: defaultProduct, version: versionInfo.baseVersion}}
+		return &jvmConfiguration{ri: ri, vendor: sunVendor, purlProduct: defaultProduct, version: versionInfo.baseVersion,
+			cpeInfos: cpeInfos, path: path, hasJdk: hasJdk}, nil
 	}
 
 	// Oracle GraalVM
 	if ri.GraalVMVersion != "" || strings.Contains(implementor, graalVMProduct) ||
 		strings.Contains(path, graalVMProduct) {
-		return identifyGraalVM(ri, path, hasJdk)
+		return identifyGraalVM(ri, versionInfo, path, hasJdk), nil
 	}
 
-	// OracleJDK: When path contains oracle, commercial built type, or one of expected strings in source
+	// OracleJDK: When path contains oracle, RI BuildType is commercial, or RI Source contains one of the expected strings
+	// The vendor of Oracle cannot be used as that is also the same for OpenJDK. The commercial flag is relied on as a default
+	// differentiator from OpenJDK so its important that any other vendor specific identification that may also use commercial
+	// be identified earler in the above vendor checks. The checks using the Source field are special cases where OracleJDK has
+	// some releases without the expected other identifiers.
 	if strings.Contains(path, oracleVendor) || strings.Contains(ri.BuildType, commercialBuildType) ||
-		containsAny(ri.Source, oracleJdkSourceIndicators) {
-		return identifyOracleJDK(ri, defaultProduct, path, hasJdk)
+		containsAny(ri.Source, []string{"graal", " open:git:"}) {
+		return identifyOracleJDK(ri, versionInfo, defaultProduct, path, hasJdk)
 	}
 
-	// Default: OpenJDK
-	cpeVersion := javaVersion
-	if javaFamily <= 8 {
-		cpeVersion = fmt.Sprintf("%v", javaFamily)
+	// Default implementation is OpenJDK if no other vendor matches succeeded.
+	cpeVersion := versionInfo.baseVersion
+	if versionInfo.family <= 8 {
+		cpeVersion = fmt.Sprintf("%v", versionInfo.family)
 	}
-	cpeInfo := jvmCpeInfo{vendor: oracleVendor, product: openJdkProduct, version: cpeVersion, update: cpeUpdate}
-	return jvmConfiguration{ri: ri, vendor: oracleVendor, purlProduct: openJdkProduct, version: version,
-		cpeInfos: []jvmCpeInfo{cpeInfo}, path: path, hasJdk: hasJdk}
+	cpeInfo := jvmCpeInfo{vendor: oracleVendor, product: openJdkProduct, version: cpeVersion, update: versionInfo.update}
+	return &jvmConfiguration{ri: ri, vendor: oracleVendor, purlProduct: openJdkProduct, version: versionInfo.version,
+		cpeInfos: []jvmCpeInfo{cpeInfo}, path: path, hasJdk: hasJdk}, nil
 }
 
 // Construct CPE's from []jvmCPEInfo. All values are provided in jvmCPEInfo with the exception of
@@ -399,33 +406,6 @@ func (config jvmConfiguration) jvmCpes() []cpe.CPE {
 	return cpes
 }
 
-// jvmFamilyVersionAndUpdate returns the Java Family (eg 8, 11,17, 21, 23), the version (JEP 223, MAJOR.MINOR.SECURITY),
-// and the update value that follows the underscore. Build info prefixed by a '+' and beyond is ignored.
-func jvmFamilyVersionAndUpdate(version string) (int, string, string) {
-	versionBeforePlus := strings.Split(version, "+")[0]
-	versionUnderscoreSplit := strings.Split(versionBeforePlus, "_")
-
-	var update string
-	if len(versionUnderscoreSplit) > 1 {
-		update = strings.Split(versionUnderscoreSplit[1], "-")[0]
-	}
-
-	var javaFamily int
-	versionSplit := strings.Split(versionUnderscoreSplit[0], ".")
-	if len(versionSplit) >= 1 {
-		javaFamily, _ = strconv.Atoi(versionSplit[0]) // TODO error handling?
-		if javaFamily == 1 && len(versionSplit) > 1 {
-			javaFamily, _ = strconv.Atoi(versionSplit[1]) // TODO error handling?
-		}
-	}
-
-	versionStr := strings.Split(versionUnderscoreSplit[0], "-")[0]
-
-	// this could be a legacy or modern string that does not have an update
-	// TODO handle parsing failures and what might happen with zero is returned
-	return javaFamily, versionStr, update
-}
-
 func jvmProjectByType(ty string, hasJdk bool) string {
 	if hasJdk || !strings.Contains(strings.ToLower(ty), jre) {
 		return jdk
@@ -433,8 +413,9 @@ func jvmProjectByType(ty string, hasJdk bool) string {
 	return jre
 }
 
-// jvmPackageVersion attempts to extract the correct version value for the JVM given a platter of version strings to choose
-// from, and makes special consideration to what a valid version is relative to JEP 223.
+// versionInfo (replaces jvmPackageVersion) attempts to extract the correct version values for the JVM given a platter of version strings to choose
+// from, and makes special consideration to what a valid version is relative to JEP 223. The returned jvmVersionInfo struct contains the components
+// of the Java version as well as additional values for GraalVM so that each vendor's approach to using these in purl and cpe values can be supported.
 //
 // example version values (openjdk >8):
 //
@@ -497,31 +478,89 @@ func jvmProjectByType(ty string, hasJdk bool) string {
 //	FULL_VERSION          Reasonable prevalent, but difficult to distinguish pre-release info vs aux info (jep 223 sensitive)
 //	JAVA_VERSION          Most prevalent, but least specific (jep 223 sensitive)
 //	IMPLEMENTOR_VERSION   Unusable or missing in some cases
-func jvmPackageVersion(ri *pkg.JavaVMRelease) string {
-	var version string
+func versionInfo(ri *pkg.JavaVMRelease) (jvmVersionInfo, error) {
+	var version, graalVMVersion string
+	var graalVMFamily, componentFamily int
+	var graalVerErr error
+
 	switch {
 	case ri.JavaRuntimeVersion != "":
-		return ri.JavaRuntimeVersion
-	case ri.FullVersion != "":
+		version = ri.JavaRuntimeVersion
+	case ri.FullVersion != "" && ri.JavaVersion != "":
 		// if the full version major version matches the java version major version, then use the full version
-		fullMajor := trim0sFromLeft(strings.Split(ri.FullVersion, ".")[0]) // TODO Why this change? Document motivation for it or revert.
-		javaMajor := trim0sFromLeft(strings.Split(ri.JavaVersion, ".")[0])
+		fullMajor := strings.Split(ri.FullVersion, ".")[0]
+		javaMajor := strings.Split(ri.JavaVersion, ".")[0]
 		if fullMajor == javaMajor {
-			return ri.FullVersion
+			version = ri.FullVersion
+		} else {
+			version = ri.JavaVersion
 		}
-		fallthrough
 	case ri.JavaVersion != "":
-		return ri.JavaVersion
+		version = ri.JavaVersion
 	}
 
-	return version
+	// Collect the GraalVM version info and customize if the version to use for Java if missing
+	if ri.GraalVMVersion != "" {
+		graalVMFamily, graalVMVersion, _, graalVerErr = splitVersion(ri.GraalVMVersion)
+		// Handle special cases where no java values provided in release and need to infer from component_catalog
+		// having Java specific properties. componentFamily used later if no javaFamily can be found
+		match := graalJavaPropertiesRegEx.FindStringSubmatch(ri.ComponentCatalog)
+		if len(match) == 2 {
+			componentFamily, _ = strconv.Atoi(match[1]) // No error handling as regex will only match with 8 or 11
+		}
+		// use the Graal version as Java version for releases 23 and higher if no Java version is provided
+		if version == "" && graalVMFamily >= 23 {
+			version = graalVMVersion
+		}
+	}
+
+	javaFamily, baseVersion, update, javaVerError := splitVersion(version)
+
+	// In some cases where a GraalVM release identifies the family from its components only then default to this value for the famil and base version
+	if componentFamily > 0 && javaFamily == 0 {
+		javaFamily = componentFamily
+		if javaVerError != nil { // Use the graal specific component version as the Java family and base
+			baseVersion = fmt.Sprintf("%d", componentFamily)
+			javaVerError = nil
+		}
+	}
+
+	return jvmVersionInfo{version, javaFamily, baseVersion, update, graalVMFamily, graalVMVersion}, errors.Join(javaVerError, graalVerErr)
 }
 
-func trim0sFromLeft(v string) string {
-	if v == "0" {
-		return v
+// splitVersion converts a version string containing the Java Family (eg 8, 11,17, 21, 23), the version (JEP 223, MAJOR.MINOR.SECURITY),
+// and the update value that follows the underscore into its individual pieces. Build info prefixed by a '+' or '_' and beyond is ignored.
+func splitVersion(version string) (int, string, string, error) {
+	versionBeforePlus := strings.Split(version, "+")[0]
+	versionUnderscoreSplit := strings.Split(versionBeforePlus, "_")
+
+	var javaFamily int
+	var baseVersion string = versionUnderscoreSplit[0]
+	var update string
+	var err error
+
+	if len(versionUnderscoreSplit) > 1 {
+		update = strings.TrimLeft(strings.Split(versionUnderscoreSplit[1], "-")[0], "0")
 	}
-	return strings.TrimLeft(v, "0")
+
+	// Get the Java family value
+	versionSplit := strings.Split(baseVersion, ".")
+	if len(versionSplit) >= 1 {
+		familyIndex := 0
+		if versionSplit[0] == "1" {
+			familyIndex = 1
+		}
+		if versionSplit[familyIndex] != "" {
+			javaFamily, _ = strconv.Atoi(versionSplit[familyIndex]) // ignore error as next check will create one
+		}
+	}
+	baseVersion = strings.Split(baseVersion, "-")[0]
+
+	if baseVersion == "" || javaFamily <= 0 {
+		err = fmt.Errorf("could not find Java base version or identify family in '%s'", version)
+	}
+
+	return javaFamily, baseVersion, update, err
 }
 
 func parseJvmReleaseInfo(r io.ReadCloser) (*pkg.JavaVMRelease, error) {
