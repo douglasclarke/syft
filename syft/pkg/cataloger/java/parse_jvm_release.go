@@ -219,7 +219,7 @@ func (config jvmConfiguration) jvmPurl() string {
 	return pURL.ToString()
 }
 
-var graalJavaPropertiesRegEx = regexp.MustCompile("graal-updater-ee-component-catalog-java(8|11)\\.properties")
+var graalJavaPropertiesRegEx = regexp.MustCompile(`graal-updater-ee-component-catalog-java(8|11)\\.properties`)
 
 // Identify the GraalVM install based on the release file contents. The product naming and CPE info is contextual on
 // community versus enterprise as well as changing naming as of GRAAL_VERSION 23.0.0 in both editions.
@@ -535,7 +535,7 @@ func splitVersion(version string) (int, string, string, error) {
 	versionUnderscoreSplit := strings.Split(versionBeforePlus, "_")
 
 	var javaFamily int
-	var baseVersion string = versionUnderscoreSplit[0]
+	var baseVersion = versionUnderscoreSplit[0]
 	var update string
 	var err error
 
