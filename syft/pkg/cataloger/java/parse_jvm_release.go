@@ -225,10 +225,16 @@ var graalJavaPropertiesRegEx = regexp.MustCompile(`graal-updater-ee-component-ca
 // Identify the GraalVM install based on the release file contents. The product naming and CPE info is contextual on
 // community versus enterprise as well as changing naming as of GRAAL_VERSION 23.0.0 in both editions.
 //
-// Oracle GraalVM CVE's
-// cpe:2.3:a:oracle:graalvm:22.0.1:*:*:*:community:*:*:*
-// cpe:2.3:a:oracle:graalvm:21.3.12:*:*:*:enterprise:*:*:*
-// cpe:2.3:a:oracle:graalvm_for_jdk:17.0.13:*:*:*:*:*:*:*
+// GraalVM releases
+// Edition (GRAALVM_VERSION)              PURL examples                                    CPE examples
+// ------------------------- ------------------------------------------------ -------------------------------------------------------
+// community (< 23.0.0)      pkg:generic/oracle/graalvm22-ce-17-jdk@22.3.0    cpe:2.3:a:oracle:graalvm:22.3.0:*:*:*:community:*:*:*
+// community (>= 23.0.0)     pkg:generic/oracle/graalvm-ce-23-jdk@23.0.2      cpe:2.3:a:oracle:graalvm:23.0.2:*:*:*:community:*:*:*
+// enterprise (< 23.0.0)     pkg:generic/oracle/graalvm21-ee-8-jdk@21.3.12    cpe:2.3:a:oracle:graalvm:21.3.12:*:*:*:enterprise:*:*:*
+// enterprise (< 23.0.0)     pkg:generic/oracle/graalvm19-ee-11-jdk@19.3.6    cpe:2.3:a:oracle:graalvm:19.3.6:*:*:*:enterprise:*:*:*
+// enterprise (< 23.0.0)     pkg:generic/oracle/graalvm21-ee-8-jdk@21.3.5     cpe:2.3:a:oracle:graalvm:21.3.5:*:*:*:enterprise:*:*:*
+// 'for JDK' (>- 23.0.0)     pkg:generic/oracle/graalvm-17-jdk@17.0.12        cpe:2.3:a:oracle:graalvm_for_jdk:17.0.13:*:*:*:*:*:*:*
+// 'for JDK' (>- 23.0.0)     pkg:generic/oracle/graalvm-21-jdk@21.0.6         cpe:2.3:a:oracle:graalvm_for_jdk:21.0.6:*:*:*:*:*:*:*
 func identifyGraalVM(ri *pkg.JavaVMRelease, versionInfo jvmVersionInfo, path string, hasJdk bool) *jvmConfiguration {
 	// Start with the assumption of GraalVM Enterprise Edition and then adjust in switch statement for variants
 	var graalCpeSWEdition, graalEditionCode string

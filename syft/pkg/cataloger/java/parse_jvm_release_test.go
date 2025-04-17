@@ -1109,6 +1109,35 @@ func TestJvmPurl(t *testing.T) {
 		},
 		// Oracle GraalVM CE, EE and for JDK releases
 		{
+			name: "GraalVM Community Edition 22.3.0",
+			ri: &pkg.JavaVMRelease{
+				Implementor:     "GraalVM Community",
+				JavaVersion:     "17.0.5",
+				JavaVersionDate: "2022-10-18",
+				Libc:            "gnu",
+				OsArch:          "aarch64",
+				OsName:          "Linux",
+				GraalVMVersion:  "22.3.0",
+			},
+			path:         "graalvm-community-openjdk-23.0.2+7.1/release ",
+			expectedPURL: "pkg:generic/oracle/graalvm22-ce-17-jdk@22.3.0?arch=aarch64&os=Linux",
+		},
+		{
+			name: "GraalVM Community Edition 23.1.1",
+			ri: &pkg.JavaVMRelease{
+				Implementor:        "GraalVM Community",
+				JavaRuntimeVersion: "21.0.1+12-jvmci-23.1-b19",
+				JavaVersion:        "21.0.1",
+				JavaVersionDate:    "2023-10-17",
+				Libc:               "gnu",
+				OsArch:             "x86_64",
+				OsName:             "Linux",
+				GraalVMVersion:     "23.1.1",
+			},
+			path:         "graalvm-community-openjdk-23.0.2+7.1/release ",
+			expectedPURL: "pkg:generic/oracle/graalvm-ce-21-jdk@21.0.1?arch=x86_64&os=Linux",
+		},
+		{
 			name: "GraalVM for JDK 23 Community 23.0.2",
 			ri: &pkg.JavaVMRelease{
 				Implementor:        "GraalVM Community",
@@ -1148,6 +1177,18 @@ func TestJvmPurl(t *testing.T) {
 				ComponentCatalog: "uln://linux-update.oracle.com/rpc/api/?linux=ol7_x86_64_graalvm_core&macos=macos_64_graalvm|https://www.graalvm.org/component-catalog/otn-yum-component-catalog-java11.properties|https://www.graalvm.org/component-catalog/graal-updater-ee-component-catalog-java11.properties",
 			},
 			expectedPURL: "pkg:generic/oracle/graalvm19-ee-11-jdk@19.3.6?arch=amd64&os=Linux",
+		},
+		{
+			name: "Oracle GraalVM EE 21.3.5 for JDK 8",
+			ri: &pkg.JavaVMRelease{
+				OsArch:           "x86_64",
+				OsName:           "Linux",
+				BuildType:        "commercial",
+				JavaVersion:      "1.8.0_361",
+				GraalVMVersion:   "21.3.5",
+				ComponentCatalog: "gds://oca.opensource.oracle.com/gds/meta-data.json|uln://linux-update.oracle.com/rpc/api/?linux=generic_linux_x86_64_graalvm_jdk8&macos=macos_64_graalvm_jdk8&windows=windows_64_graalvm_jdk8|https://www.graalvm.org/component-catalog/v2/graal-updater-ee-component-catalog-java8.properties",
+			},
+			expectedPURL: "pkg:generic/oracle/graalvm21-ee-8-jdk@21.3.5?arch=x86_64&os=Linux",
 		},
 		{
 			name: "Oracle GraalVM EE 19.3.6 for JDK 8",
