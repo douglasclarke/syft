@@ -1,0 +1,4 @@
+OS_NAME=linux
+OS_ARCH=amd64
+GRAALVM_VERSION=19.3.6
+component_catalog=component_catalog=uln://linux-update.oracle.com/rpc/api/?linux=ol7_x86_64_graalvm_core&macos=macos_64_graalvm|https://www.graalvm.org/component-catalog/otn-yum-component-catalog-java11.properties|https://www.graalvm.org/component-catalog/graal-updater-ee-component-catalog-java11.properties
