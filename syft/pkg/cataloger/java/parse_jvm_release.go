@@ -179,6 +179,7 @@ func findJvmFiles(resolver file.Resolver, installDir string) ([]string, bool) {
 	return results, hasJdk
 }
 
+// Build generic purl from jvmConfiguration and optional qualifiers
 func (config jvmConfiguration) jvmPurl() string {
 	if config.ri == nil {
 		return ""
@@ -346,6 +347,8 @@ func identifyJvm(ri *pkg.JavaVMRelease, path string, hasJdk bool) (*jvmConfigura
 			cpeInfos: cpeInfos, path: path, hasJdk: hasJdk}, nil
 	}
 
+	// TODO: Add additional vendors here
+
 	// Oracle GraalVM
 	if ri.GraalVMVersion != "" || strings.Contains(implementor, graalVMProduct) ||
 		strings.Contains(path, graalVMProduct) {
@@ -362,7 +365,7 @@ func identifyJvm(ri *pkg.JavaVMRelease, path string, hasJdk bool) (*jvmConfigura
 		return identifyOracleJDK(ri, versionInfo, defaultProduct, path, hasJdk)
 	}
 
-	// Default implementation is OpenJDK if no other vendor matches succeeded.
+	// Default implementation is OpenJDK
 	cpeVersion := versionInfo.baseVersion
 	if versionInfo.family <= 8 {
 		cpeVersion = fmt.Sprintf("%v", versionInfo.family)
@@ -478,6 +481,29 @@ func jvmProjectByType(ty string, hasJdk bool) string {
 //	FULL_VERSION          Reasonable prevalent, but difficult to distinguish pre-release info vs aux info (jep 223 sensitive)
 //	JAVA_VERSION          Most prevalent, but least specific (jep 223 sensitive)
 //	IMPLEMENTOR_VERSION   Unusable or missing in some cases
+//
+// Oracle GraalVM requires some additional handling based on its own GRAALVM_VERSION and various release editions
+//
+// GraalVM EE (GRAALVM_VERSION < 23.0.0) also covers CE
+//
+//	GRAALVM_VERSION=19.3.6 - Special case where JDK version only in component_catalog
+//	component_catalog=...graal-updater-ee-component-catalog-java8.properties
+//
+//	GRAALVM_VERSION="21.3.6"
+//	JAVA_VERSION="1.8.0_371"
+//
+//	GRAALVM_VERSION="20.3.4"
+//	JAVA_VERSION="11.0.13"
+//
+// GraalVM for JDK (GRAALVM_VERSION >= 23.0.0)
+//
+//	GRAALVM_VERSION="24.0.1"
+//	JAVA_RUNTIME_VERSION="22.0.1+8-jvmci-b01"
+//	JAVA_VERSION="22.0.1"
+//
+//	GRAALVM_VERSION="23.0.5"
+//	JAVA_RUNTIME_VERSION="17.0.12+8-LTS-jvmci-23.0-b41"
+//	JAVA_VERSION="17.0.12"
 func versionInfo(ri *pkg.JavaVMRelease) (jvmVersionInfo, error) {
 	var version, graalVMVersion string
 	var graalVMFamily, componentFamily int
@@ -499,7 +525,7 @@ func versionInfo(ri *pkg.JavaVMRelease) (jvmVersionInfo, error) {
 		version = ri.JavaVersion
 	}
 
-	// Collect the GraalVM version info and customize if the version to use for Java if missing
+	// Collect the GraalVM version and family and customize if the version to use for Java if missing
 	if ri.GraalVMVersion != "" {
 		graalVMFamily, graalVMVersion, _, graalVerErr = splitVersion(ri.GraalVMVersion)
 		// Handle special cases where no java values provided in release and need to infer from component_catalog
@@ -516,7 +542,8 @@ func versionInfo(ri *pkg.JavaVMRelease) (jvmVersionInfo, error) {
 
 	javaFamily, baseVersion, update, javaVerError := splitVersion(version)
 
-	// In some cases where a GraalVM release identifies the family from its components only then default to this value for the famil and base version
+	// In  cases where a GraalVM release identifies the JDK only in its components_catalog then
+	// use the graalVM family value for the Java family and base version (if java version split failed)
 	if componentFamily > 0 && javaFamily == 0 {
 		javaFamily = componentFamily
 		if javaVerError != nil { // Use the graal specific component version as the Java family and base
