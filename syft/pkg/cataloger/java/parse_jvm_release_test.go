@@ -11,20 +11,25 @@ import (
 
 func TestJvmCpes(t *testing.T) {
 	tests := []struct {
-		name           string
-		pkgVersion     string
-		primaryVendor  string
-		primaryProduct string
-		imageType      string
-		hasJdk         bool
-		expected       []cpe.CPE
+		name          string
+		pkgVersion    string
+		primaryVendor string
+		product       string
+		imageType     string
+		cpeInfos      []jvmCpeInfo
+		path          string
+		hasJdk        bool
+		expected      []cpe.CPE
 	}{
 		{
-			name:           "zulu release",
-			pkgVersion:     "9.0.1+20",
-			primaryVendor:  "azul",
-			primaryProduct: "zulu",
-			imageType:      "jdk",
+			name:          "zulu release",
+			pkgVersion:    "9.0.1+20",
+			primaryVendor: "azul",
+			cpeInfos: []jvmCpeInfo{
+				{vendor: "azul", product: "zulu", version: "9.0.1"},
+				{vendor: oracleVendor, product: openJdkProduct, version: "9.0.1"},
+			},
+			imageType: "jdk",
 			expected: []cpe.CPE{
 				{
 					Attributes: cpe.Attributes{
@@ -32,7 +37,6 @@ func TestJvmCpes(t *testing.T) {
 						Vendor:  "azul",
 						Product: "zulu",
 						Version: "9.0.1",
-						Update:  "",
 					},
 					Source: cpe.DeclaredSource,
 				},
@@ -42,19 +46,18 @@ func TestJvmCpes(t *testing.T) {
 						Vendor:  "oracle",
 						Product: "openjdk",
 						Version: "9.0.1",
-						Update:  "",
 					},
 					Source: cpe.DeclaredSource,
 				},
 			},
 		},
 		{
-			name:           "sun release",
-			pkgVersion:     "1.6.0_322-b002",
-			primaryVendor:  "sun",
-			primaryProduct: "jre",
-			imageType:      "jre",
-			hasJdk:         true,
+			name:          "sun release",
+			pkgVersion:    "1.6.0_322-b002",
+			primaryVendor: "sun",
+			cpeInfos:      buildCpeInfos("sun", []string{jre, jdk}, "1.6.0_322-b002", "", ""),
+			imageType:     "jre",
+			hasJdk:        true,
 			expected: []cpe.CPE{
 				{
 					Attributes: cpe.Attributes{
@@ -79,38 +82,38 @@ func TestJvmCpes(t *testing.T) {
 			},
 		},
 		{
-			name:           "oracle se release",
-			pkgVersion:     "1.8.0_322-b02",
-			primaryVendor:  "oracle",
-			primaryProduct: "java_se",
-			imageType:      "jdk",
-			hasJdk:         true,
+			name:          "OpenJDK JavaSE 8 RI", // https://jdk.java.net/java-se-ri/8-MR6
+			pkgVersion:    "1.8.0_44",
+			primaryVendor: "oracle",
+			cpeInfos:      buildCpeInfos(oracleVendor, []string{openJdkProduct}, "1.8.0_44", "", ""),
+			imageType:     "jdk",
+			hasJdk:        true,
 			expected: []cpe.CPE{
 				{
 					Attributes: cpe.Attributes{
 						Part:    "a",
 						Vendor:  "oracle",
-						Product: "java_se",
+						Product: "openjdk",
 						Version: "1.8.0",
-						Update:  "update322",
+						Update:  "update44",
 					},
 					Source: cpe.DeclaredSource,
 				},
+			},
+		},
+		{
+			name:          "OpenJDK JavaSE 21 RI", // https://jdk.java.net/java-se-ri/21
+			pkgVersion:    "1.8.0_322-b02",
+			primaryVendor: "oracle",
+			cpeInfos:      buildCpeInfos(oracleVendor, []string{openJdkProduct}, "1.8.0_322-b02", "", ""),
+			imageType:     "jdk",
+			hasJdk:        true,
+			expected: []cpe.CPE{
 				{
 					Attributes: cpe.Attributes{
 						Part:    "a",
 						Vendor:  "oracle",
-						Product: "jre",
-						Version: "1.8.0",
-						Update:  "update322",
-					},
-					Source: cpe.DeclaredSource,
-				},
-				{
-					Attributes: cpe.Attributes{
-						Part:    "a",
-						Vendor:  "oracle",
-						Product: "jdk",
+						Product: "openjdk",
 						Version: "1.8.0",
 						Update:  "update322",
 					},
@@ -119,11 +122,12 @@ func TestJvmCpes(t *testing.T) {
 			},
 		},
 		{
-			name:           "JEP 223 version with build info",
-			pkgVersion:     "9.0.1+20",
-			primaryVendor:  "oracle",
-			primaryProduct: "openjdk",
-			imageType:      "openjdk",
+			name:          "JEP 223 version with build info",
+			pkgVersion:    "9.0.1+20",
+			primaryVendor: "oracle",
+			product:       "openjdk",
+			cpeInfos:      buildCpeInfos(oracleVendor, []string{openJdkProduct}, "9.0.1+20", "", ""),
+			imageType:     "openjdk",
 			expected: []cpe.CPE{
 				{
 					Attributes: cpe.Attributes{
@@ -138,11 +142,14 @@ func TestJvmCpes(t *testing.T) {
 			},
 		},
 		{
-			name:           "JEP 223 version without build info",
-			pkgVersion:     "11.0.9",
-			primaryVendor:  "oracle",
-			primaryProduct: "openjdk",
-			imageType:      "openjdk",
+			name:          "JEP 223 version without build info",
+			pkgVersion:    "11.0.9",
+			primaryVendor: "oracle",
+			product:       "openjdk",
+			cpeInfos: []jvmCpeInfo{
+				{vendor: oracleVendor, product: openJdkProduct, version: "11.0.9"},
+			},
+			imageType: "openjdk",
 			expected: []cpe.CPE{
 				{
 					Attributes: cpe.Attributes{
@@ -157,11 +164,36 @@ func TestJvmCpes(t *testing.T) {
 			},
 		},
 		{
-			name:           "no plus sign in version string",
-			pkgVersion:     "1.8.0",
-			primaryVendor:  "oracle",
-			primaryProduct: "openjdk",
-			imageType:      "openjdk",
+			name:          "valid post-jep223",
+			pkgVersion:    "21.0.4+7-LTS",
+			primaryVendor: "Eclipse Adoptium",
+			product:       "openjdk",
+			cpeInfos: []jvmCpeInfo{
+				{vendor: oracleVendor, product: openJdkProduct, version: "21.0.4+7-LTS"},
+			},
+			imageType: "openjdk",
+			expected: []cpe.CPE{
+				{
+					Attributes: cpe.Attributes{
+						Part:    "a",
+						Vendor:  "oracle",
+						Product: "openjdk",
+						Version: "21.0.4+7-LTS",
+						Update:  "",
+					},
+					Source: cpe.DeclaredSource,
+				},
+			},
+		},
+		{
+			name:          "no plus sign in version string",
+			pkgVersion:    "1.8.0",
+			primaryVendor: "oracle",
+			product:       "openjdk",
+			cpeInfos: []jvmCpeInfo{
+				{vendor: oracleVendor, product: openJdkProduct, version: "1.8.0"},
+			},
+			imageType: "openjdk",
 			expected: []cpe.CPE{
 				{
 					Attributes: cpe.Attributes{
@@ -176,263 +208,1023 @@ func TestJvmCpes(t *testing.T) {
 			},
 		},
 		{
-			name:           "empty version string",
-			pkgVersion:     "",
-			primaryVendor:  "oracle",
-			primaryProduct: "",
-			imageType:      "",
-			expected:       nil,
+			name:          "empty version string",
+			pkgVersion:    "",
+			primaryVendor: "oracle",
+			imageType:     "",
+			expected:      nil,
+		},
+		// Oracle JDK
+		{
+			name:          "OracleJDK 8u431",
+			path:          "jdk1.8.0_431/",
+			primaryVendor: "oracle",
+			pkgVersion:    "1.8.0_431-b10",
+			product:       jdk,
+			cpeInfos:      buildCpeInfos(oracleVendor, []string{"java_se", jre, jdk}, "1.8.0_431-b10", "", ""),
+			expected: []cpe.CPE{
+				{
+					Attributes: cpe.Attributes{
+						Part:    "a",
+						Vendor:  "oracle",
+						Product: "java_se",
+						Version: "1.8.0",
+						Update:  "update431",
+					},
+					Source: cpe.DeclaredSource,
+				},
+				{
+					Attributes: cpe.Attributes{
+						Part:    "a",
+						Vendor:  "oracle",
+						Product: "jre",
+						Version: "1.8.0",
+						Update:  "update431",
+					},
+					Source: cpe.DeclaredSource,
+				},
+				{
+					Attributes: cpe.Attributes{
+						Part:    "a",
+						Vendor:  "oracle",
+						Product: "jdk",
+						Version: "1.8.0",
+						Update:  "update431",
+					},
+					Source: cpe.DeclaredSource,
+				},
+			},
+		},
+		{
+			name:          "OracleJDK 8u441-perf",
+			path:          "jdk1.8.0_441/",
+			primaryVendor: "oracle",
+			pkgVersion:    "1.8.0_441-perf-46-b09",
+			product:       jdk,
+			cpeInfos:      buildCpeInfos(oracleVendor, []string{"java_se", jre, jdk}, "1.8.0_441-perf-46-b09", "", "enterprise_performance_pack"),
+			expected: []cpe.CPE{
+				{
+					Attributes: cpe.Attributes{
+						Part:      "a",
+						Vendor:    "oracle",
+						Product:   "java_se",
+						Version:   "1.8.0",
+						Update:    "update441",
+						SWEdition: "enterprise_performance_pack",
+					},
+					Source: cpe.DeclaredSource,
+				},
+				{
+					Attributes: cpe.Attributes{
+						Part:      "a",
+						Vendor:    "oracle",
+						Product:   "jre",
+						Version:   "1.8.0",
+						Update:    "update441",
+						SWEdition: "enterprise_performance_pack",
+					},
+					Source: cpe.DeclaredSource,
+				},
+				{
+					Attributes: cpe.Attributes{
+						Part:      "a",
+						Vendor:    "oracle",
+						Product:   "jdk",
+						Version:   "1.8.0",
+						Update:    "update441",
+						SWEdition: "enterprise_performance_pack",
+					},
+					Source: cpe.DeclaredSource,
+				},
+			},
+		},
+		{
+			name:          "OracleJDK 21.0.6",
+			path:          "jdk-21.0.6/",
+			primaryVendor: "oracle",
+			pkgVersion:    "21.0.6+8-LTS-188",
+			product:       jdk,
+			cpeInfos: []jvmCpeInfo{
+				{vendor: oracleVendor, product: "java_se", version: "21.0.6"},
+				{vendor: oracleVendor, product: jre, version: "21.0.6"},
+				{vendor: oracleVendor, product: jdk, version: "21.0.6"},
+			},
+			expected: []cpe.CPE{
+				{
+					Attributes: cpe.Attributes{
+						Part:    "a",
+						Vendor:  "oracle",
+						Product: "java_se",
+						Version: "21.0.6",
+					},
+					Source: cpe.DeclaredSource,
+				},
+				{
+					Attributes: cpe.Attributes{
+						Part:    "a",
+						Vendor:  "oracle",
+						Product: "jre",
+						Version: "21.0.6",
+					},
+					Source: cpe.DeclaredSource,
+				},
+				{
+					Attributes: cpe.Attributes{
+						Part:    "a",
+						Vendor:  "oracle",
+						Product: "jdk",
+						Version: "21.0.6",
+					},
+					Source: cpe.DeclaredSource,
+				},
+			},
+		},
+		{
+			name:          "GraalVM CE 22.3.0 with JDK 17",
+			hasJdk:        true,
+			primaryVendor: "oracle",
+			pkgVersion:    "22.3.0",
+			product:       "graalvm22-ce-17-jdk",
+			cpeInfos: []jvmCpeInfo{
+				{vendor: oracleVendor, product: graalVMProduct, version: "22.3.0", swEdition: "community"},
+			},
+			expected: []cpe.CPE{
+				{
+					Attributes: cpe.Attributes{
+						Part:      "a",
+						Vendor:    "oracle",
+						Product:   "graalvm",
+						Version:   "22.3.0",
+						SWEdition: "community",
+					},
+					Source: cpe.DeclaredSource,
+				},
+			},
+		},
+		{
+			name:          "GraalVM CE 23.0.2 GV 24.1.2",
+			path:          "graalvm-community-openjdk-23.0.2+7.1",
+			hasJdk:        true,
+			primaryVendor: "oracle",
+			pkgVersion:    "23.0.2",
+			product:       "graalvm-ce-23-jdk",
+			cpeInfos: []jvmCpeInfo{
+				{vendor: oracleVendor, product: graalVMProduct, version: "23.0.2", swEdition: "community"},
+			},
+			expected: []cpe.CPE{
+				{
+					Attributes: cpe.Attributes{
+						Part:      "a",
+						Vendor:    "oracle",
+						Product:   "graalvm",
+						Version:   "23.0.2",
+						SWEdition: "community",
+					},
+					Source: cpe.DeclaredSource,
+				},
+			},
+		},
+		{
+			name:          "Oracle GraalVM EE 19.3.6 for Java 8",
+			pkgVersion:    "19.3.6",
+			primaryVendor: "oracle",
+			path:          "graalvm-ee-java8-19.3.6/release",
+			cpeInfos: []jvmCpeInfo{
+				{vendor: oracleVendor, product: graalVMProduct, version: "19.3.6", edition: "8", swEdition: "enterprise"},
+			},
+			expected: []cpe.CPE{
+				{
+					Attributes: cpe.Attributes{
+						Part:      "a",
+						Vendor:    oracleVendor,
+						Product:   graalVMProduct,
+						Version:   "19.3.6",
+						Update:    "",
+						Edition:   "8",
+						SWEdition: "enterprise",
+					},
+					Source: cpe.DeclaredSource,
+				},
+			},
+		},
+		{
+			name:          "Oracle GraalVM EE 19.3.6 for Java 11",
+			pkgVersion:    "19.3.6",
+			primaryVendor: "oracle",
+			path:          "graalvm-ee-java11-19.3.6/release",
+			cpeInfos: []jvmCpeInfo{
+				{vendor: oracleVendor, product: graalVMProduct, version: "19.3.6", edition: "11", swEdition: "enterprise"},
+			},
+			expected: []cpe.CPE{
+				{
+					Attributes: cpe.Attributes{
+						Part:      "a",
+						Vendor:    oracleVendor,
+						Product:   graalVMProduct,
+						Version:   "19.3.6",
+						Update:    "",
+						Edition:   "11",
+						SWEdition: "enterprise",
+					},
+					Source: cpe.DeclaredSource,
+				},
+			},
+		},
+		{
+			name:          "Oracle GraalVM EE 21.3.9 with JDK 11",
+			hasJdk:        true,
+			primaryVendor: oracleVendor,
+			product:       "graalvm21-ee-11-jdk",
+			pkgVersion:    "21.3.9",
+			cpeInfos: []jvmCpeInfo{
+				{vendor: oracleVendor, product: graalVMProduct, version: "21.3.9", edition: "11", swEdition: "enterprise"},
+			},
+			expected: []cpe.CPE{
+				{
+					Attributes: cpe.Attributes{
+						Part:      "a",
+						Vendor:    "oracle",
+						Product:   "graalvm",
+						Version:   "21.3.9",
+						Edition:   "11",
+						SWEdition: "enterprise",
+					},
+					Source: cpe.DeclaredSource,
+				},
+			},
+		},
+		{
+			name:          "Oracle GraalVM for JDK 22.0.1",
+			path:          "graalvm-jdk-22.0.1+8.1",
+			hasJdk:        true,
+			primaryVendor: oracleVendor,
+			product:       "graalvm-22-jdk",
+			pkgVersion:    "22.0.1",
+			cpeInfos: []jvmCpeInfo{
+				{vendor: oracleVendor, product: graalVMProduct, version: "22.0.1"},
+				{vendor: oracleVendor, product: "graalvm_for_jdk", version: "22.0.1"},
+			},
+			expected: []cpe.CPE{
+				{
+					Attributes: cpe.Attributes{
+						Part:    "a",
+						Vendor:  "oracle",
+						Product: "graalvm",
+						Version: "22.0.1",
+					},
+					Source: cpe.DeclaredSource,
+				},
+				{
+					Attributes: cpe.Attributes{
+						Part:    "a",
+						Vendor:  "oracle",
+						Product: "graalvm_for_jdk",
+						Version: "22.0.1",
+					},
+					Source: cpe.DeclaredSource,
+				},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := jvmCpes(tt.pkgVersion, tt.primaryVendor, tt.primaryProduct, tt.imageType, tt.hasJdk)
-			assert.Equal(t, tt.expected, result)
+			jvmConfig := jvmConfiguration{
+				ri: &pkg.JavaVMRelease{
+					ImageType: tt.imageType,
+				},
+				version:     tt.pkgVersion,
+				vendor:      tt.primaryVendor,
+				purlProduct: tt.product,
+				path:        tt.path,
+				hasJdk:      tt.hasJdk,
+				cpeInfos:    tt.cpeInfos,
+			}
+			resultCPEs := jvmConfig.jvmCpes()
+			assert.Equal(t, tt.expected, resultCPEs)
 		})
 	}
 }
 
-func TestJvmVersion(t *testing.T) {
+func TestRiJvmVersionInfo(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    *pkg.JavaVMRelease
-		expected string
+		name                string
+		ri                  *pkg.JavaVMRelease
+		expectedVersionInfo *jvmVersionInfo
+		expectedError       string
 	}{
 
 		{
 			name: "JavaRuntimeVersion fallback",
-			input: &pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				JavaRuntimeVersion: "21.0.4+7-LTS",
 				JavaVersion:        "bogus",
 				FullVersion:        "bogus",
 				SemanticVersion:    "bogus",
 			},
-			expected: "21.0.4+7-LTS",
+			expectedVersionInfo: &jvmVersionInfo{
+				version:     "21.0.4+7-LTS",
+				family:      21,
+				baseVersion: "21.0.4",
+			},
 		},
 		{
 			name: "JavaVersion fallback",
-			input: &pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				JavaVersion:     "21.0.4",
 				FullVersion:     "bogus",
 				SemanticVersion: "bogus",
 			},
-			expected: "21.0.4",
+			expectedVersionInfo: &jvmVersionInfo{
+				version:     "21.0.4",
+				family:      21,
+				baseVersion: "21.0.4",
+			},
+		},
+		{
+			name: "JavaRuntimeVersion preferred to JavaVersion",
+			ri: &pkg.JavaVMRelease{
+				JavaVersion:        "1.8.0_131+b08",
+				JavaRuntimeVersion: "1.8.0_131",
+			},
+			expectedVersionInfo: &jvmVersionInfo{
+				version:     "1.8.0_131",
+				family:      8,
+				baseVersion: "1.8.0",
+				update:      "131",
+			},
 		},
 		{
 			// there is an example of this in eclipse-temurin:8u312-b07-jdk
 			name: "FullVersion is more accurate",
-			input: &pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
 				JavaVersion: "1.8.0_131",
 				FullVersion: "1.8.0_131+b08",
 			},
-			expected: "1.8.0_131+b08",
+			expectedVersionInfo: &jvmVersionInfo{
+				version:     "1.8.0_131+b08",
+				family:      8,
+				baseVersion: "1.8.0",
+				update:      "131",
+			},
 		},
 		{
-			name:     "empty input fields",
-			input:    &pkg.JavaVMRelease{},
-			expected: "",
+			name:          "empty input fields",
+			ri:            &pkg.JavaVMRelease{},
+			expectedError: "could not find Java base version or identify family in ''",
+		},
+		{
+			name:          "empty version field with periods",
+			ri:            &pkg.JavaVMRelease{JavaVersion: ".."},
+			expectedError: "could not find Java base version or identify family in '..'",
+		},
+		{
+			name:          "non-numeric version fields",
+			ri:            &pkg.JavaVMRelease{JavaVersion: "a.b.c"},
+			expectedError: "could not find Java base version or identify family in 'a.b.c'",
+		},
+		{
+			name: "GraalVM 1.1.1",
+			ri: &pkg.JavaVMRelease{
+				GraalVMVersion: "19.1.1",
+				JavaVersion:    "1.8.0",
+			},
+			expectedVersionInfo: &jvmVersionInfo{
+				version:        "1.8.0",
+				family:         8,
+				baseVersion:    "1.8.0",
+				graalvmFamily:  19,
+				graalVMVersion: "19.1.1",
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := jvmPackageVersion(tt.input)
-			assert.Equal(t, tt.expected, result)
+			versionInfo, err := versionInfo(tt.ri)
+			if tt.expectedError == "" {
+				assert.Nil(t, err)
+				assert.NotNil(t, versionInfo.version)
+				assert.NotNil(t, versionInfo)
+				if tt.expectedVersionInfo != nil {
+					assert.Equal(t, tt.expectedVersionInfo.version, versionInfo.version)
+					assert.Equal(t, tt.expectedVersionInfo.family, versionInfo.family)
+					assert.Equal(t, tt.expectedVersionInfo.baseVersion, versionInfo.baseVersion)
+					assert.Equal(t, tt.expectedVersionInfo.update, versionInfo.update)
+					assert.Equal(t, tt.expectedVersionInfo.graalvmFamily, versionInfo.graalvmFamily)
+					assert.Equal(t, tt.expectedVersionInfo.graalVMVersion, versionInfo.graalVMVersion)
+				}
+			} else {
+				assert.NotNil(t, err)
+				if err.Error() != tt.expectedError {
+					t.Errorf("expected error message '%s', but got '%s'", tt.expectedError, err.Error())
+				}
+			}
 		})
 	}
 }
 
-func TestGetJVMVersionAndUpdate(t *testing.T) {
+func TestSplitVersion(t *testing.T) {
+	tests := []struct {
+		name          string
+		version       string
+		expected      jvmVersionInfo
+		expectedError string
+	}{
+		{
+			name:    "legacy version with underscore and build",
+			version: "1.8.0_302-b08",
+			expected: jvmVersionInfo{
+				family:      8,
+				baseVersion: "1.8.0",
+				update:      "302",
+			},
+		},
+		{
+			name:    "legacy version with underscore but no build",
+			version: "1.8.0_302",
+			expected: jvmVersionInfo{
+				family:      8,
+				baseVersion: "1.8.0",
+				update:      "302",
+			},
+		},
+		{
+			name:    "JEP 223 version with plus sign",
+			version: "9.0.1+20",
+			expected: jvmVersionInfo{
+				family:      9,
+				baseVersion: "9.0.1",
+				update:      "",
+			},
+		},
+		{
+			name:    "JEP 223 version with plus but no update",
+			version: "11.0.9+",
+			expected: jvmVersionInfo{
+				family:      11,
+				baseVersion: "11.0.9",
+				update:      "",
+			},
+		},
+		{
+			name:    "modern version without plus or underscore",
+			version: "11.0.9",
+			expected: jvmVersionInfo{
+				family:      11,
+				baseVersion: "11.0.9",
+				update:      "",
+			},
+		},
+		{
+			name:    "legacy version without underscore or plus",
+			version: "1.7.0",
+			expected: jvmVersionInfo{
+				family:      7,
+				baseVersion: "1.7.0",
+				update:      "",
+			},
+		},
+		{
+			name:          "empty version string",
+			version:       "",
+			expectedError: "could not find Java base version or identify family in ''",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			javaFamily, baseVersion, update, err := splitVersion(tt.version)
+			if tt.expectedError == "" {
+				assert.Nil(t, err)
+				assert.Equal(t, tt.expected.family, javaFamily)
+				assert.Equal(t, tt.expected.baseVersion, baseVersion)
+				assert.Equal(t, tt.expected.update, update)
+			} else {
+				assert.NotNil(t, err)
+				if err.Error() != tt.expectedError {
+					t.Errorf("expected error message '%s', but got '%s'", tt.expectedError, err.Error())
+				}
+			}
+		})
+	}
+}
+
+// Create consistent vendor jvmCpeInfo to simplify test case setup
+func buildCpeInfos(vendor string, products []string, version, edition, swEdition string) []jvmCpeInfo {
+	_, baseVersion, update, _ := splitVersion(version)
+	cpeInfos := []jvmCpeInfo{}
+	for _, prod := range products {
+		cpeInfos = append(cpeInfos, jvmCpeInfo{vendor: vendor, product: prod, version: baseVersion, update: update, edition: edition, swEdition: swEdition})
+	}
+	return cpeInfos
+}
+
+func TestIdentifyJvm(t *testing.T) {
 	tests := []struct {
 		name           string
-		version        string
-		expectedVer    string
-		expectedUpdate string
+		ri             *pkg.JavaVMRelease
+		path           string
+		hasJdk         bool
+		expectedConfig *jvmConfiguration
+		expectedError  string
 	}{
 		{
-			name:           "legacy version with underscore and build",
-			version:        "1.8.0_302-b08",
-			expectedVer:    "1.8.0",
-			expectedUpdate: "302",
+			name: "Azul implementor with Zulu in path",
+			ri: &pkg.JavaVMRelease{
+				Implementor: "Azul Systems",
+				ImageType:   "JDK",
+				JavaVersion: "1.8.0",
+			},
+			path:   "/usr/lib/jvm/zulu-11-amd64/release",
+			hasJdk: true,
+			expectedConfig: &jvmConfiguration{
+				vendor:      "azul",
+				purlProduct: "zulu",
+				version:     "1.8.0",
+				cpeInfos: []jvmCpeInfo{
+					{vendor: "azul", product: "zulu", version: "1.8.0"},
+					{vendor: oracleVendor, product: openJdkProduct, version: "1.8.0"},
+				},
+			},
 		},
 		{
-			name:           "legacy version with underscore but no build",
-			version:        "1.8.0_302",
-			expectedVer:    "1.8.0",
-			expectedUpdate: "302",
+			name: "Sun implementor with JDK",
+			ri: &pkg.JavaVMRelease{
+				Implementor: "Sun Microsystems",
+				ImageType:   "JDK",
+				JavaVersion: "1.8.0",
+			},
+			path:   "/usr/lib/jvm/jdk-1.8-sun-amd64/release",
+			hasJdk: true,
+			expectedConfig: &jvmConfiguration{
+				vendor:      "sun",
+				purlProduct: "jdk",
+				version:     "1.8.0",
+			},
 		},
 		{
-			name:           "JEP 223 version with plus sign",
-			version:        "9.0.1+20",
-			expectedVer:    "9.0.1",
-			expectedUpdate: "",
+			name: "Oracle implementor with JRE",
+			ri: &pkg.JavaVMRelease{
+				Implementor: "Oracle Corporation",
+				ImageType:   "JRE",
+				JavaVersion: "1.8.0",
+			},
+			path:   "/usr/lib/jvm/jdk-1.8-oracle-x64/release",
+			hasJdk: false,
+			expectedConfig: &jvmConfiguration{
+				vendor:      "oracle",
+				purlProduct: "jre-8", // Currently no support for OpenJDK being reported as jre
+				version:     "8",
+			},
 		},
 		{
-			name:           "JEP 223 version with plus but no update",
-			version:        "11.0.9+",
-			expectedVer:    "11.0.9",
-			expectedUpdate: "",
+			name: "OracleJDK 1.8.0",
+			ri: &pkg.JavaVMRelease{
+				JavaRuntimeVersion: "1.8.0_411-b25",
+				JavaVersion:        "1.8.0_411",
+				OsArch:             "amd64",
+				OsName:             "Linux",
+				OsVersion:          "2.6",
+				Source:             ".:git:71ec2089cf8c+",
+				BuildType:          "commercial",
+			},
+			hasJdk: true,
+			expectedConfig: &jvmConfiguration{
+				vendor:      "oracle",
+				purlProduct: "jdk-8",
+				version:     "8u411",
+				cpeInfos: []jvmCpeInfo{
+					{vendor: oracleVendor, product: oracleJavaSeProduct, version: "8u411"},
+					{vendor: oracleVendor, product: jre, version: "1.8.0", update: "411"},
+					{vendor: oracleVendor, product: jdk, version: "1.8.0", update: "411"},
+				},
+				//cpeInfos:    buildCpeInfos(oracleVendor, []string{"java_se", jre, jdk}, "1.8.0_411-b25", "", ""),
+			},
 		},
 		{
-			name:           "modern version without plus or underscore",
-			version:        "11.0.9",
-			expectedVer:    "11.0.9",
-			expectedUpdate: "",
+			name: "OpenJDK with JDK",
+			ri: &pkg.JavaVMRelease{
+				Implementor: "OpenJDK",
+				ImageType:   "JDK",
+				JavaVersion: "1.8.0",
+			},
+			path:   "/opt/java/openjdk/release",
+			hasJdk: true,
+			expectedConfig: &jvmConfiguration{
+				vendor:      "oracle",
+				purlProduct: "openjdk",
+				version:     "1.8.0",
+			},
 		},
 		{
-			name:           "legacy version without underscore or plus",
-			version:        "1.7.0",
-			expectedVer:    "1.7.0",
-			expectedUpdate: "",
+			name: "OpenJDK JavaSE 21 RI", // https://jdk.java.net/java-se-ri/21
+			ri: &pkg.JavaVMRelease{
+				Implementor: "Oracle Corporation",
+				JavaVersion: "21",
+			},
+			path:   "jdk-21/release",
+			hasJdk: true,
+			expectedConfig: &jvmConfiguration{
+				vendor:      "oracle",
+				purlProduct: "openjdk",
+				version:     "21",
+			},
 		},
 		{
-			name:           "empty version string",
-			version:        "",
-			expectedVer:    "",
-			expectedUpdate: "",
+			name: "Amazon Corretto with JDK",
+			ri: &pkg.JavaVMRelease{
+				Implementor: "Amazon Corretto",
+				ImageType:   "JDK",
+				JavaVersion: "17",
+			},
+			path:   "/usr/lib/jvm/java-17-amazon-corretto/release",
+			hasJdk: true,
+			expectedConfig: &jvmConfiguration{
+				vendor:      "oracle", // corretto upstream is oracle openjdk
+				purlProduct: "openjdk",
+				version:     "17",
+			},
+		},
+		{
+			name: "OracleJDK vendor and JDK in path",
+			ri: &pkg.JavaVMRelease{
+				Implementor: "",
+				ImageType:   "JDK",
+				JavaVersion: "1.8_123",
+			},
+			path: "/usr/lib/jvm/jdk-1.8-oracle-x64/release",
+			expectedConfig: &jvmConfiguration{
+				vendor:      "oracle",
+				purlProduct: "jdk-8",
+				version:     "8u123",
+			},
+		},
+		{
+			name: "Oracle JDK 21.0.6+8-LTS-188 release",
+			ri: &pkg.JavaVMRelease{
+				Implementor: "Oracle Corporation",
+				ImageType:   "JDK",
+				JavaVersion: "21.0.6+8-LTS-188",
+				Source:      ".:git:ca0a3a5c8edb open:git:b6adca627539",
+			},
+			path:   "jdk-21.0.6/release",
+			hasJdk: true,
+			expectedConfig: &jvmConfiguration{
+				vendor:      "oracle",
+				purlProduct: "jdk-21",
+				version:     "21.0.6+8-LTS-188",
+				cpeInfos:    buildCpeInfos(oracleVendor, []string{oracleJavaSeProduct, jre, jdk}, "21.0.6", "", ""),
+			},
+		},
+		{
+			name: "Oracle Java SE Development Kit 8u411",
+			ri: &pkg.JavaVMRelease{
+				JavaVersion: "1.8.0_411",
+				BuildType:   "commercial",
+			},
+			path:   "jdk1.8.0_411/release",
+			hasJdk: true,
+			expectedConfig: &jvmConfiguration{
+				vendor:      "oracle",
+				purlProduct: "jdk-8",
+				version:     "8u411",
+				cpeInfos: []jvmCpeInfo{
+					{vendor: oracleVendor, product: oracleJavaSeProduct, version: "8u411"},
+					{vendor: oracleVendor, product: jre, version: "1.8.0", update: "411"},
+					{vendor: oracleVendor, product: jdk, version: "1.8.0", update: "411"},
+				},
+			},
+		},
+		{
+			name: "GraalVM CE 21.0.0",
+			ri: &pkg.JavaVMRelease{
+				Implementor:    "GraalVM Community",
+				JavaVersion:    "21.0.0",
+				GraalVMVersion: "22.0.0",
+			},
+			expectedConfig: &jvmConfiguration{
+				vendor:      "oracle",
+				purlProduct: "graalvm22-ce-21-jdk",
+				version:     "22.0.0",
+				cpeInfos:    buildCpeInfos(oracleVendor, []string{graalVMProduct}, "22.0.0", "", "community"),
+			},
+		},
+		{
+			name: "GraalVM CE 23.0.2 GV 24.1.2",
+			path: "graalvm-community-openjdk-23.0.2+7.1/release",
+			ri: &pkg.JavaVMRelease{
+				Implementor:        "GraalVM Community",
+				JavaRuntimeVersion: "23.0.2+7-jvmci-b01",
+				JavaVersion:        "23.0.2",
+				JavaVersionDate:    "2025-01-21",
+				GraalVMVersion:     "24.1.2",
+			},
+			expectedConfig: &jvmConfiguration{
+				vendor:      "oracle",
+				purlProduct: "graalvm-ce-23-jdk",
+				version:     "23.0.2",
+				cpeInfos:    buildCpeInfos(oracleVendor, []string{graalVMProduct}, "23.0.2", "", "community"),
+			},
+		},
+		{
+			name: "GraalVM EE 22.0.0",
+			ri: &pkg.JavaVMRelease{
+				Implementor:    "Oracle Corporation",
+				JavaVersion:    "21.0.0",
+				GraalVMVersion: "22.0.0",
+			},
+			expectedConfig: &jvmConfiguration{
+				vendor:      "oracle",
+				purlProduct: "graalvm22-ee-21-jdk",
+				version:     "22.0.0",
+				cpeInfos:    buildCpeInfos(oracleVendor, []string{graalVMProduct}, "22.0.0", "21", "enterprise"),
+			},
+		},
+		{
+			name: "GraalVM for JDK 23.1.0",
+			ri: &pkg.JavaVMRelease{
+				Implementor:    "Oracle Corporation",
+				JavaVersion:    "23.1.0",
+				GraalVMVersion: "24.0.0",
+			},
+			expectedConfig: &jvmConfiguration{
+				vendor:      "oracle",
+				purlProduct: "graalvm-23-jdk",
+				version:     "23.1.0",
+				cpeInfos:    buildCpeInfos(oracleVendor, []string{"graalvm_for_jdk"}, "23.1.0", "23", ""),
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ver, update := getJVMVersionAndUpdate(tt.version)
-			assert.Equal(t, tt.expectedVer, ver)
-			assert.Equal(t, tt.expectedUpdate, update)
-		})
-	}
-}
-
-func TestJvmPrimaryVendorProduct(t *testing.T) {
-	tests := []struct {
-		name            string
-		implementor     string
-		path            string
-		imageType       string
-		hasJdk          bool
-		expectedVendor  string
-		expectedProduct string
-	}{
-		{
-			name:            "Azul implementor with Zulu in path",
-			implementor:     "Azul Systems",
-			path:            "/usr/lib/jvm/zulu-11-amd64/release",
-			imageType:       "JDK",
-			hasJdk:          true,
-			expectedVendor:  "azul",
-			expectedProduct: "zulu",
-		},
-		{
-			name:            "Sun implementor with JDK",
-			implementor:     "Sun Microsystems",
-			path:            "/usr/lib/jvm/jdk-1.8-sun-amd64/release",
-			imageType:       "JDK",
-			hasJdk:          true,
-			expectedVendor:  "sun",
-			expectedProduct: "jdk",
-		},
-		{
-			name:            "Oracle implementor with JRE",
-			implementor:     "Oracle Corporation",
-			path:            "/usr/lib/jvm/jdk-1.8-oracle-x64/release",
-			imageType:       "JRE",
-			hasJdk:          false,
-			expectedVendor:  "oracle",
-			expectedProduct: "jre",
-		},
-		{
-			name:            "Oracle vendor with JDK in path",
-			implementor:     "",
-			path:            "/usr/lib/jvm/jdk-1.8-oracle-x64/release",
-			imageType:       "JDK",
-			hasJdk:          true,
-			expectedVendor:  "oracle",
-			expectedProduct: "jdk",
-		},
-		{
-			name:            "OpenJDK with JDK",
-			implementor:     "OpenJDK",
-			path:            "/opt/java/openjdk/release",
-			imageType:       "JDK",
-			hasJdk:          true,
-			expectedVendor:  "oracle", // like temurin
-			expectedProduct: "openjdk",
-		},
-		{
-			name:            "Amazon Corretto with JDK",
-			implementor:     "Amazon Corretto",
-			path:            "/usr/lib/jvm/java-17-amazon-corretto/release",
-			imageType:       "JDK",
-			hasJdk:          true,
-			expectedVendor:  "oracle", // corretto upstream is oracle openjdk
-			expectedProduct: "openjdk",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			vendor, product := jvmPrimaryVendorProduct(tt.implementor, tt.path, tt.imageType, tt.hasJdk)
-			assert.Equal(t, tt.expectedVendor, vendor)
-			assert.Equal(t, tt.expectedProduct, product)
+			jvmConfig, err := identifyJvm(tt.ri, tt.path, tt.hasJdk)
+			if tt.expectedError == "" {
+				assert.Nil(t, err)
+				assert.NotNil(t, jvmConfig)
+				assert.Equal(t, tt.expectedConfig.vendor, jvmConfig.vendor)
+				assert.Equal(t, tt.expectedConfig.purlProduct, jvmConfig.purlProduct)
+				assert.Equal(t, tt.expectedConfig.version, jvmConfig.version)
+				if len(tt.expectedConfig.cpeInfos) > 0 {
+					assert.Equal(t, tt.expectedConfig.cpeInfos, jvmConfig.cpeInfos)
+				}
+			} else {
+				assert.NotNil(t, err)
+				if err.Error() != tt.expectedError {
+					t.Errorf("expected error message '%s', but got '%s'", tt.expectedError, err.Error())
+				}
+			}
 		})
 	}
 }
 
 func TestJvmPurl(t *testing.T) {
 	tests := []struct {
-		name         string
-		ri           pkg.JavaVMRelease
-		version      string
-		vendor       string
-		product      string
-		expectedPURL string
+		name          string
+		ri            *pkg.JavaVMRelease
+		path          string
+		hasJdk        bool
+		expectedPURL  string
+		expectedError string
 	}{
 		{
 			name: "build source repo provided",
-			ri: pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
+				Implementor:     openJdkProduct,
+				ImageType:       "JDK",
+				JavaVersion:     "21.0.4",
 				BuildSourceRepo: "https://github.com/adoptium/temurin-build.git",
 			},
-			version:      "21.0.4",
-			vendor:       "oracle",
-			product:      "jdk",
-			expectedPURL: "pkg:generic/oracle/jdk@21.0.4?repository_url=https%3A%2F%2Fgithub.com%2Fadoptium%2Ftemurin-build.git",
+			expectedPURL: "pkg:generic/oracle/openjdk@21.0.4?repository_url=https%3A%2F%2Fgithub.com%2Fadoptium%2Ftemurin-build.git",
+		},
+		{
+			name: "OracleJDK 1.8.0_411",
+			ri: &pkg.JavaVMRelease{
+				JavaRuntimeVersion: "1.8.0_411-b25",
+				JavaVersion:        "1.8.0_411",
+				OsArch:             "amd64",
+				OsName:             "Linux",
+				OsVersion:          "2.6",
+				Source:             ".:git:71ec2089cf8c+",
+				BuildType:          "commercial",
+			},
+			expectedPURL: "pkg:generic/oracle/jdk-8@8u411?arch=amd64&os=Linux",
 		},
 		{
 			name: "source repo provided, no build source repo",
-			ri: pkg.JavaVMRelease{
-				SourceRepo: "https://github.com/adoptium/jdk21u.git",
+			ri: &pkg.JavaVMRelease{
+				SourceRepo:         "https://github.com/adoptium/jdk21u.git",
+				JavaRuntimeVersion: "21.0.4",
+				Implementor:        "azul",
 			},
-			version:      "21.0.4",
-			vendor:       "azul",
-			product:      "zulu",
 			expectedPURL: "pkg:generic/azul/zulu@21.0.4?repository_url=https%3A%2F%2Fgithub.com%2Fadoptium%2Fjdk21u.git",
 		},
 		{
 			name: "no repository URLs provided",
-			ri:   pkg.JavaVMRelease{
+			ri: &pkg.JavaVMRelease{
+				JavaVersion: "17.0.2",
+				ImageType:   jdk,
 				// No repository URLs provided
 			},
-			version:      "17.0.2",
-			vendor:       "oracle",
-			product:      "jdk",
-			expectedPURL: "pkg:generic/oracle/jdk@17.0.2",
+			expectedPURL: "pkg:generic/oracle/openjdk@17.0.2",
 		},
 		{
 			name: "JRE with source repo",
-			ri: pkg.JavaVMRelease{
-				SourceRepo: "https://github.com/adoptium/jre-repo.git",
+			ri: &pkg.JavaVMRelease{
+				JavaRuntimeVersion: "1.8.0_302",
+				Implementor:        "oracle",
+				ImageType:          "jre",
+				SourceRepo:         "https://github.com/adoptium/jre-repo.git",
 			},
-			version:      "1.8.0_302",
-			vendor:       "oracle",
-			product:      "jre",
-			expectedPURL: "pkg:generic/oracle/jre@1.8.0_302?repository_url=https%3A%2F%2Fgithub.com%2Fadoptium%2Fjre-repo.git",
+			expectedPURL: "pkg:generic/oracle/openjdk@1.8.0_302?repository_url=https%3A%2F%2Fgithub.com%2Fadoptium%2Fjre-repo.git",
+		},
+		{
+			name: "OpenJDK JavaSE 21 RI", //https://jdk.java.net/java-se-ri/21
+			ri: &pkg.JavaVMRelease{
+				Implementor:     "Oracle Corporation",
+				JavaVersion:     "21",
+				JavaVersionDate: "2023-09-19",
+				Libc:            "gnu",
+				OsArch:          "x86_64",
+				OsName:          "Linux",
+				Source:          ".:git:890adb6410da",
+			},
+			expectedPURL: "pkg:generic/oracle/openjdk@21?arch=x86_64&os=Linux",
+		},
+		// Oracle JDK (JavaSE)
+		{
+			name: "OracleJDK JDK 8u431", // https://www.oracle.com/java/technologies/downloads/#java21
+			ri: &pkg.JavaVMRelease{
+				JavaVersion:        "1.8.0_431",
+				JavaRuntimeVersion: "1.8.0_431-b10",
+				OsVersion:          "2.6",
+				OsArch:             "aarch64",
+				OsName:             "Linux",
+				Source:             ".:git:fc007cccb4cf",
+				BuildType:          "commercial",
+			},
+			expectedPURL: "pkg:generic/oracle/jdk-8@8u431?arch=aarch64&os=Linux",
+		},
+		{
+			name: "OracleJDK Java 8 Enterprise Performance Pack",
+			ri: &pkg.JavaVMRelease{
+				JavaVersion:        "1.8.0_441",
+				JavaRuntimeVersion: "1.8.0_441-perf-46-b09",
+				OsVersion:          "2.6",
+				OsArch:             "amd64",
+				OsName:             "Linux",
+				BuildType:          "commercial",
+			},
+			expectedPURL: "pkg:generic/oracle/jdk-8-perf@8u441?arch=amd64&os=Linux",
+		},
+		{
+			name: "OracleJDK 21.0.6", // https://www.oracle.com/java/technologies/downloads/#java21
+			ri: &pkg.JavaVMRelease{
+				Implementor:        "Oracle Corporation",
+				JavaRuntimeVersion: "21.0.6+8-LTS-188",
+				JavaVersion:        "21.0.6",
+				JavaVersionDate:    "2025-01-21",
+				Libc:               "gnu",
+				OsArch:             "x86_64",
+				OsName:             "Linux",
+				Source:             ".:git:ca0a3a5c8edb open:git:b6adca627539",
+			},
+			expectedPURL: "pkg:generic/oracle/jdk-21@21.0.6%2B8-LTS-188?arch=x86_64&os=Linux",
+		},
+		{
+			name: "OracleJDK JavaSE 23.0.2",
+			ri: &pkg.JavaVMRelease{
+				Implementor:        "Oracle Corporation",
+				ImplementorVersion: "18.9",
+				JavaRuntimeVersion: "23.0.2+7-58",
+				JavaVersion:        "23.0.2",
+				JavaVersionDate:    "2025-01-21",
+				Libc:               "gnu",
+				OsArch:             "aarch64",
+				OsName:             "Linux",
+				Source:             ".:git:3de6199edce8 graal:git:e4b575df2c80 graal-enterprise:git:26dca3ee41dc mx:git:12267ad74f15 open:git:a13b02ce6f85",
+			},
+			expectedPURL: "pkg:generic/oracle/jdk-23@23.0.2%2B7-58?arch=aarch64&os=Linux",
+		},
+		// Oracle GraalVM CE, EE and for JDK releases
+		{
+			name: "GraalVM for JDK 23 Community 23.0.2",
+			ri: &pkg.JavaVMRelease{
+				Implementor:        "GraalVM Community",
+				JavaRuntimeVersion: "23.0.2+7-jvmci-b01",
+				JavaVersion:        "23.0.2",
+				JavaVersionDate:    "2025-01-21",
+				Libc:               "gnu",
+				OsArch:             "aarch64",
+				OsName:             "Linux",
+				GraalVMVersion:     "24.1.2",
+			},
+			path:         "graalvm-community-openjdk-23.0.2+7.1/release ",
+			expectedPURL: "pkg:generic/oracle/graalvm-ce-23-jdk@23.0.2?arch=aarch64&os=Linux",
+		},
+		{
+			name: "GraalVM for JDK 17.0.12",
+			ri: &pkg.JavaVMRelease{
+				Implementor:        "Oracle Corporation",
+				JavaRuntimeVersion: "17.0.12+8-LTS-jvmci-23.0-b41",
+				JavaVersion:        "17.0.12",
+				JavaVersionDate:    "2024-07-16",
+				Libc:               "gnu",
+				OsArch:             "x86_64",
+				OsName:             "Linux",
+				GraalVMVersion:     "23.0.5",
+				// "GDS_PRODUCT_ID":    "D53FAE8052773FFAE0530F15000AA6C6"
+			},
+			path:         "graalvm-jdk-17.0.12+8.1/release",
+			expectedPURL: "pkg:generic/oracle/graalvm-17-jdk@17.0.12?arch=x86_64&os=Linux",
+		},
+		{
+			name: "Oracle GraalVM EE 19.3.6 for JDK 11",
+			ri: &pkg.JavaVMRelease{
+				OsArch:           "amd64",
+				OsName:           "Linux",
+				GraalVMVersion:   "19.3.6",
+				ComponentCatalog: "uln://linux-update.oracle.com/rpc/api/?linux=ol7_x86_64_graalvm_core&macos=macos_64_graalvm|https://www.graalvm.org/component-catalog/otn-yum-component-catalog-java11.properties|https://www.graalvm.org/component-catalog/graal-updater-ee-component-catalog-java11.properties",
+			},
+			expectedPURL: "pkg:generic/oracle/graalvm19-ee-11-jdk@19.3.6?arch=amd64&os=Linux",
+		},
+		{
+			name: "Oracle GraalVM EE 19.3.6 for JDK 8",
+			ri: &pkg.JavaVMRelease{
+				OsArch:           "amd64",
+				OsName:           "Linux",
+				GraalVMVersion:   "19.3.6",
+				ComponentCatalog: "uln://linux-update.oracle.com/rpc/api/?linux=ol7_x86_64_graalvm_core&macos=macos_64_graalvm|https://www.graalvm.org/component-catalog/otn-yum-component-catalog-java8.properties|https://www.graalvm.org/component-catalog/graal-updater-ee-component-catalog-java8.properties",
+			},
+			expectedPURL: "pkg:generic/oracle/graalvm19-ee-8-jdk@19.3.6?arch=amd64&os=Linux",
+		},
+		{
+			name: "Oracle GraalVM EE 21.3.9 for JDK 11",
+			ri: &pkg.JavaVMRelease{
+				BuildType:          "commercial",
+				Implementor:        "Oracle Corporation",
+				ImplementorVersion: "18.9",
+				JavaRuntimeVersion: "11.0.22+9-LTS-jvmci-21.3-b43",
+				JavaVersion:        "11.0.22",
+				JavaVersionDate:    "2024-01-16",
+				OsArch:             "x86_64",
+				OsName:             "Linux",
+				GraalVMVersion:     "21.3.9",
+			},
+			expectedPURL: "pkg:generic/oracle/graalvm21-ee-11-jdk@21.3.9?arch=x86_64&os=Linux",
+		},
+		{
+			name: "Oracle GraalVM for JDK 21.0.6",
+			ri: &pkg.JavaVMRelease{
+				Implementor:        "Oracle Corporation",
+				JavaRuntimeVersion: "21.0.6+8-LTS-jvmci-23.1-b55",
+				JavaVersion:        "21.0.6",
+				JavaVersionDate:    "2025-01-21",
+				Libc:               "gnu",
+				OsArch:             "aarch64",
+				OsName:             "Linux",
+				GraalVMVersion:     "23.1.6",
+			},
+			path:         "graalvm-jdk-21.0.6+8.1/release",
+			expectedPURL: "pkg:generic/oracle/graalvm-21-jdk@21.0.6?arch=aarch64&os=Linux",
+		},
+		{
+			name: "Oracle GraalVM 25 with Java 25.1.1",
+			ri: &pkg.JavaVMRelease{
+				Implementor:    "Oracle Corporation",
+				GraalVMVersion: "23",
+				JavaVersion:    "25.0.0",
+			},
+			expectedPURL: "pkg:generic/oracle/graalvm-25-jdk@25.0.0",
+		},
+		{
+			name: "Oracle GraalVM 22 with Java 22.1.1",
+			ri: &pkg.JavaVMRelease{
+				Implementor:    "Oracle Corporation",
+				GraalVMVersion: "22",
+			},
+			expectedError: "could not find Java base version or identify family in ''",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actualPURL := jvmPurl(tt.ri, tt.version, tt.vendor, tt.product)
-			assert.Equal(t, tt.expectedPURL, actualPURL)
+			jvmInfo, err := identifyJvm(tt.ri, tt.path, tt.hasJdk)
+
+			if tt.expectedError == "" {
+				if err != nil {
+					t.Errorf("unexpected error: %s", err.Error())
+				} else {
+					assert.NotNil(t, jvmInfo)
+					assert.Equal(t, tt.expectedPURL, jvmInfo.jvmPurl())
+				}
+			} else {
+				assert.NotNil(t, err)
+				if err != nil && err.Error() != tt.expectedError {
+					t.Errorf("expected error message '%s', but got '%s'", tt.expectedError, err.Error())
+				}
+			}
 		})
 	}
 }
