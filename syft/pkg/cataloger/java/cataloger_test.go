@@ -277,10 +277,9 @@ func TestJvmDistributionCataloger(t *testing.T) {
 				PURL: "pkg:generic/oracle/graalvm19-ee-11-jdk@19.3.6?arch=amd64&os=linux",
 				Metadata: pkg.JavaVMInstallation{
 					Release: pkg.JavaVMRelease{
-						OsArch:           "amd64",
-						OsName:           "linux",
-						GraalVMVersion:   "19.3.6",
-						ComponentCatalog: "component_catalog=uln://linux-update.oracle.com/rpc/api/?linux=ol7_x86_64_graalvm_core&macos=macos_64_graalvm|https://www.graalvm.org/component-catalog/otn-yum-component-catalog-java11.properties|https://www.graalvm.org/component-catalog/graal-updater-ee-component-catalog-java11.properties",
+						OsArch:         "amd64",
+						OsName:         "linux",
+						GraalVMVersion: "19.3.6",
 					},
 					Files: []string{
 						"graalvm-ee-java11-19.3.6/release",

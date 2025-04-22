@@ -93,9 +93,6 @@ type JavaVMRelease struct {
 
 	// GraalVMVersion is Oracle GraalVM specific field
 	GraalVMVersion string `mapstructure:"GRAALVM_VERSION,omitempty" json:"graalVMVersion,omitempty"`
-
-	// ComponentCatalog is Oracle GraalVM specific field
-	ComponentCatalog string `mapstructure:"component_catalog,omitempty" json:"componentCatalog,omitempty"`
 }
 
 // JavaArchive encapsulates all Java ecosystem metadata for a package as well as an (optional) parent relationship.

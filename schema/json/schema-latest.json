@@ -1299,9 +1299,6 @@
         },
         "graalVMVersion": {
           "type": "string"
-        },
-        "componentCatalog": {
-          "type": "string"
         }
       },
       "type": "object"
