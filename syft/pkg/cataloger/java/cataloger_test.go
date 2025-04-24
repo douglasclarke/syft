@@ -238,15 +238,15 @@ func TestJvmDistributionCataloger(t *testing.T) {
 			name:    "GraalVM Community Edition 22.3.0 for JDK 17",
 			fixture: "test-fixtures/jvm-installs/graalvm-ce-java17-22.3.0",
 			expected: pkg.Package{
-				Name:      "graalvm22-ce-17-jdk",
+				Name:      "graalvm-ce",
 				Version:   "22.3.0",
 				FoundBy:   "java-jvm-cataloger",
 				Locations: file.NewLocationSet(file.NewLocation("release")),
 				Licenses:  pkg.NewLicenseSet(),
 				Type:      pkg.BinaryPkg,
 				CPEs: []cpe.CPE{
-					cpe.Must("cpe:2.3:a:oracle:graalvm:22.3.0:*:*:*:community:*:*:*", cpe.DeclaredSource)},
-				PURL: "pkg:generic/oracle/graalvm22-ce-17-jdk@22.3.0?arch=aarch64&os=Linux",
+					cpe.Must("cpe:2.3:a:oracle:graalvm:22.3.0:*:17:*:community:*:*:*", cpe.DeclaredSource)},
+				PURL: "pkg:generic/oracle/graalvm-ce@22.3.0?arch=aarch64&jdk=17&os=Linux",
 				Metadata: pkg.JavaVMInstallation{
 					Release: pkg.JavaVMRelease{
 						Implementor:     "GraalVM Community",
@@ -266,15 +266,15 @@ func TestJvmDistributionCataloger(t *testing.T) {
 			name:    "Oracle GraalVM Enterprise Edition 19.3.6 for JDK 11",
 			fixture: "test-fixtures/jvm-installs/graalvm-ee-java11-19.3.6",
 			expected: pkg.Package{
-				Name:      "graalvm19-ee-11-jdk",
+				Name:      "graalvm-ee",
 				Version:   "19.3.6",
 				FoundBy:   "java-jvm-cataloger",
 				Locations: file.NewLocationSet(file.NewLocation("graalvm-ee-java11-19.3.6/release")),
 				Licenses:  pkg.NewLicenseSet(),
 				Type:      pkg.BinaryPkg,
 				CPEs: []cpe.CPE{
-					cpe.Must("cpe:2.3:a:oracle:graalvm:19.3.6:*:11:*:enterprise:*:*:*", cpe.DeclaredSource)},
-				PURL: "pkg:generic/oracle/graalvm19-ee-11-jdk@19.3.6?arch=amd64&os=linux",
+					cpe.Must("cpe:2.3:a:oracle:graalvm:19.3.6:*:*:*:enterprise:*:*:*", cpe.DeclaredSource)},
+				PURL: "pkg:generic/oracle/graalvm-ee@19.3.6?arch=amd64&os=linux",
 				Metadata: pkg.JavaVMInstallation{
 					Release: pkg.JavaVMRelease{
 						OsArch:         "amd64",
@@ -291,7 +291,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 			name:    "Oracle GraalVM Enterprise Edition 21.3.9 for JDK 11",
 			fixture: "test-fixtures/jvm-installs/graalvm-ee-java11-21.3.9",
 			expected: pkg.Package{
-				Name:      "graalvm21-ee-11-jdk",
+				Name:      "graalvm-ee",
 				Version:   "21.3.9",
 				FoundBy:   "java-jvm-cataloger",
 				Locations: file.NewLocationSet(file.NewLocation("release")),
@@ -299,7 +299,7 @@ func TestJvmDistributionCataloger(t *testing.T) {
 				Type:      pkg.BinaryPkg,
 				CPEs: []cpe.CPE{
 					cpe.Must("cpe:2.3:a:oracle:graalvm:21.3.9:*:11:*:enterprise:*:*:*", cpe.DeclaredSource)},
-				PURL: "pkg:generic/oracle/graalvm21-ee-11-jdk@21.3.9?arch=x86_64&os=Linux",
+				PURL: "pkg:generic/oracle/graalvm-ee@21.3.9?arch=x86_64&jdk=11&os=Linux",
 				Metadata: pkg.JavaVMInstallation{
 					Release: pkg.JavaVMRelease{
 						Implementor:        "Oracle Corporation",

@@ -344,9 +344,9 @@ func TestJvmCpes(t *testing.T) {
 			hasJdk:        true,
 			primaryVendor: "oracle",
 			pkgVersion:    "22.3.0",
-			product:       "graalvm22-ce-17-jdk",
+			product:       "graalvm-ce",
 			cpeInfos: []jvmCpeInfo{
-				{vendor: oracleVendor, product: graalVMProduct, version: "22.3.0", swEdition: "community"},
+				{vendor: oracleVendor, product: graalVMProduct, version: "22.3.0", edition: "17", swEdition: "community"},
 			},
 			expected: []cpe.CPE{
 				{
@@ -355,6 +355,7 @@ func TestJvmCpes(t *testing.T) {
 						Vendor:    "oracle",
 						Product:   "graalvm",
 						Version:   "22.3.0",
+						Edition:   "17",
 						SWEdition: "community",
 					},
 					Source: cpe.DeclaredSource,
@@ -362,14 +363,14 @@ func TestJvmCpes(t *testing.T) {
 			},
 		},
 		{
-			name:          "GraalVM CE 23.0.2 GV 24.1.2",
+			name:          "GraalVM CE 23.0.2 GRAALVM_VERSION 24.1.2",
 			path:          "graalvm-community-openjdk-23.0.2+7.1",
 			hasJdk:        true,
 			primaryVendor: "oracle",
 			pkgVersion:    "23.0.2",
-			product:       "graalvm-ce-23-jdk",
+			product:       "graalvm-ce",
 			cpeInfos: []jvmCpeInfo{
-				{vendor: oracleVendor, product: graalVMProduct, version: "23.0.2", swEdition: "community"},
+				{vendor: oracleVendor, product: graalVMProduct, version: "23.0.2", edition: "23", swEdition: "community"},
 			},
 			expected: []cpe.CPE{
 				{
@@ -378,6 +379,7 @@ func TestJvmCpes(t *testing.T) {
 						Vendor:    "oracle",
 						Product:   "graalvm",
 						Version:   "23.0.2",
+						Edition:   "23",
 						SWEdition: "community",
 					},
 					Source: cpe.DeclaredSource,
@@ -908,7 +910,7 @@ func TestIdentifyJvm(t *testing.T) {
 				vendor:      "oracle",
 				purlProduct: "graalvm-ce",
 				version:     "22.0.0",
-				cpeInfos:    buildCpeInfos(oracleVendor, []string{graalVMProduct}, "22.0.0", "", "community"),
+				cpeInfos:    buildCpeInfos(oracleVendor, []string{graalVMProduct}, "22.0.0", "21", "community"),
 				jdkFamily:   21,
 			},
 		},
@@ -926,7 +928,7 @@ func TestIdentifyJvm(t *testing.T) {
 				vendor:      "oracle",
 				purlProduct: "graalvm-ce",
 				version:     "23.0.2",
-				cpeInfos:    buildCpeInfos(oracleVendor, []string{graalVMProduct}, "23.0.2", "", "community"),
+				cpeInfos:    buildCpeInfos(oracleVendor, []string{graalVMProduct}, "23.0.2", "23", "community"),
 				jdkFamily:   23,
 			},
 		},

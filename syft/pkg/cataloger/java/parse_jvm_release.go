@@ -233,13 +233,13 @@ func (config jvmConfiguration) jvmPurl() string {
 // GraalVM releases
 // Edition (GRAALVM_VERSION)              PURL examples                                    CPE examples
 // ------------------------- ------------------------------------------------ -------------------------------------------------------
-// community (< 23.0.0)      pkg:generic/oracle/graalvm22-ce-17-jdk@22.3.0    cpe:2.3:a:oracle:graalvm:22.3.0:*:*:*:community:*:*:*
-// community (>= 23.0.0)     pkg:generic/oracle/graalvm-ce-23-jdk@23.0.2      cpe:2.3:a:oracle:graalvm:23.0.2:*:*:*:community:*:*:*
-// enterprise (< 23.0.0)     pkg:generic/oracle/graalvm21-ee-8-jdk@21.3.12    cpe:2.3:a:oracle:graalvm:21.3.12:*:*:*:enterprise:*:*:*
-// enterprise (< 23.0.0)     pkg:generic/oracle/graalvm19-ee-11-jdk@19.3.6    cpe:2.3:a:oracle:graalvm:19.3.6:*:*:*:enterprise:*:*:*
-// enterprise (< 23.0.0)     pkg:generic/oracle/graalvm21-ee-8-jdk@21.3.5     cpe:2.3:a:oracle:graalvm:21.3.5:*:*:*:enterprise:*:*:*
-// 'for JDK' (>- 23.0.0)     pkg:generic/oracle/graalvm-17-jdk@17.0.12        cpe:2.3:a:oracle:graalvm_for_jdk:17.0.13:*:*:*:*:*:*:*
-// 'for JDK' (>- 23.0.0)     pkg:generic/oracle/graalvm-21-jdk@21.0.6         cpe:2.3:a:oracle:graalvm_for_jdk:21.0.6:*:*:*:*:*:*:*
+// community (< 23.0.0)      pkg:generic/oracle/graalvm-ce@22.3.0&jdk=8       cpe:2.3:a:oracle:graalvm:22.3.0:*:8:*:community:*:*:*
+// community (>= 23.0.0)     pkg:generic/oracle/graalvm-ce@23.0.2&jdk=23      cpe:2.3:a:oracle:graalvm:23.0.2:*:23:*:community:*:*:*
+// enterprise (< 23.0.0)     pkg:generic/oracle/graalvm-ee@21.3.12&jdk=11     cpe:2.3:a:oracle:graalvm:21.3.12:*:11:*:enterprise:*:*:*
+// enterprise (< 23.0.0)     pkg:generic/oracle/graalvm-ee@19.3.6             cpe:2.3:a:oracle:graalvm:19.3.6:*:*:*:enterprise:*:*:*
+// enterprise (< 23.0.0)     pkg:generic/oracle/graalvm-ee@21.3.5&jdk=17      cpe:2.3:a:oracle:graalvm:21.3.5:*:17:*:enterprise:*:*:*
+// 'for JDK' (>- 23.0.0)     pkg:generic/oracle/graalvm@17.0.12               cpe:2.3:a:oracle:graalvm_for_jdk:17.0.13:*:*:*:*:*:*:*
+// 'for JDK' (>- 23.0.0)     pkg:generic/oracle/graalvm@21.0.6                cpe:2.3:a:oracle:graalvm_for_jdk:21.0.6:*:*:*:*:*:*:*
 func identifyGraalVM(ri *pkg.JavaVMRelease, versionInfo jvmVersionInfo, path string, hasJdk bool) *jvmConfiguration {
 	// Start with the assumption of GraalVM Enterprise Edition and then adjust in switch statement for variants
 	var graalCpeSWEdition, graalEditionCode string
@@ -253,13 +253,15 @@ func identifyGraalVM(ri *pkg.JavaVMRelease, versionInfo jvmVersionInfo, path str
 		// GraalVM Community Edition
 	case ri.Implementor == graalVMCommunityImplementor:
 		graalEditionCode, graalCpeSWEdition = graalVMCommunityEditionSuffix, graalVMCommunityEdition
-		cpeEdition = ""
 		fallthrough
 	default:
 		// GraalVM for JDK or >= 23 community
 		if versionInfo.graalvmFamily >= 23 {
 			version = versionInfo.baseVersion
 		}
+	}
+	if cpeEdition == "0" { // Handle the case where no version famile was found, avoiding "0" edition
+		cpeEdition = ""
 	}
 
 	purlProduct := fmt.Sprintf("%s%s", graalVMProduct, graalEditionCode)
@@ -494,9 +496,6 @@ func jvmProjectByType(ty string, hasJdk bool) string {
 // Oracle GraalVM requires some additional handling based on its own GRAALVM_VERSION and various release editions
 //
 // GraalVM EE (GRAALVM_VERSION < 23.0.0) also covers CE
-//
-//	GRAALVM_VERSION=19.3.6 - Special case where JDK version only in component_catalog
-//	component_catalog=...graal-updater-ee-component-catalog-java8.properties
 //
 //	GRAALVM_VERSION="21.3.6"
 //	JAVA_VERSION="1.8.0_371"
