@@ -955,7 +955,7 @@ func TestIdentifyJvm(t *testing.T) {
 				vendor:      "oracle",
 				purlProduct: "graalvm",
 				version:     "23.1.0",
-				cpeInfos:    buildCpeInfos(oracleVendor, []string{"graalvm_for_jdk"}, "23.1.0", "23", ""),
+				cpeInfos:    buildCpeInfos(oracleVendor, []string{graalVMProduct, graalVMforJdkProduct}, "23.1.0", "23", ""),
 			},
 		},
 	}

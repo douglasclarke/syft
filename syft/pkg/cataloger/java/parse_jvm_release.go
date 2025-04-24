@@ -210,7 +210,7 @@ func (config jvmConfiguration) jvmPurl() string {
 		})
 	}
 	// GraalVM enterprise and community editions before 23.0.0 were JDK specific so include as optional qualifier when available
-	if strings.HasPrefix(config.purlProduct, graalVMProduct+"-") && config.jdkFamily > 0 {
+	if strings.HasPrefix(config.purlProduct, graalVMProduct+"-") && config.jdkFamily > 0 { // TODO: Exclude if matches start of version?
 		qualifiers = append(qualifiers, packageurl.Qualifier{
 			Key:   "jdk",
 			Value: fmt.Sprintf("%d", config.jdkFamily),
@@ -263,11 +263,10 @@ func identifyGraalVM(ri *pkg.JavaVMRelease, versionInfo jvmVersionInfo, path str
 	}
 
 	purlProduct := fmt.Sprintf("%s%s", graalVMProduct, graalEditionCode)
-	cpeProduct := graalVMProduct
+	cpeInfos := []jvmCpeInfo{{vendor: oracleVendor, product: graalVMProduct, version: version, edition: cpeEdition, swEdition: graalCpeSWEdition}}
 	if ri.Implementor != graalVMCommunityImplementor && versionInfo.graalvmFamily >= 23 {
-		cpeProduct = graalVMforJdkProduct
+		cpeInfos = append(cpeInfos, jvmCpeInfo{vendor: oracleVendor, product: graalVMforJdkProduct, version: version, edition: cpeEdition, swEdition: graalCpeSWEdition})
 	}
-	cpeInfos := []jvmCpeInfo{{vendor: oracleVendor, product: cpeProduct, version: version, edition: cpeEdition, swEdition: graalCpeSWEdition}}
 	return &jvmConfiguration{ri: ri, vendor: oracleVendor, purlProduct: purlProduct, version: version, cpeInfos: cpeInfos, path: path, hasJdk: hasJdk, jdkFamily: versionInfo.family}
 }
 
