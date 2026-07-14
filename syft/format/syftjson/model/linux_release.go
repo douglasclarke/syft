@@ -65,6 +65,27 @@ type LinuxRelease struct {
 
 	// ExtendedSupport indicates whether extended security or support is available.
 	ExtendedSupport bool `json:"extendedSupport,omitempty"`
+
+	// InstalledModules lists DNF/AppStream module streams installed or enabled for the distribution.
+	InstalledModules []InstalledModule `json:"installedModules,omitempty"`
+}
+
+// InstalledModule represents a DNF/AppStream module stream installed or enabled for a Linux distribution.
+type InstalledModule struct {
+	// Name is the module name.
+	Name string `json:"name"`
+
+	// Stream is the module stream.
+	Stream string `json:"stream"`
+
+	// Version is the module stream version, when known.
+	Version string `json:"version,omitempty"`
+
+	// Context is the module stream context, when known.
+	Context string `json:"context,omitempty"`
+
+	// State is the DNF/libdnf module state, such as enabled or installed.
+	State string `json:"state,omitempty"`
 }
 
 func (s *IDLikes) UnmarshalJSON(data []byte) error {

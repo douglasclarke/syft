@@ -74,7 +74,25 @@ func toLinuxRelease(d *linux.Release) model.LinuxRelease {
 		CPEName:          d.CPEName,
 		SupportEnd:       d.SupportEnd,
 		ExtendedSupport:  d.ExtendedSupport,
+		InstalledModules: toInstalledModuleModels(d.InstalledModules),
 	}
+}
+
+func toInstalledModuleModels(modules []linux.InstalledModule) []model.InstalledModule {
+	if len(modules) == 0 {
+		return nil
+	}
+	out := make([]model.InstalledModule, 0, len(modules))
+	for _, module := range modules {
+		out = append(out, model.InstalledModule{
+			Name:    module.Name,
+			Stream:  module.Stream,
+			Version: module.Version,
+			Context: module.Context,
+			State:   module.State,
+		})
+	}
+	return out
 }
 
 func toDescriptor(d sbom.Descriptor) model.Descriptor {

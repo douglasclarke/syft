@@ -83,6 +83,21 @@ func Test_packageURL(t *testing.T) {
 			},
 			expected: "pkg:rpm/redhat/p@v-r?distro=rhel-8.4&upstream=sourcerpm",
 		},
+		{
+			name: "with modularity label",
+			distro: &linux.Release{
+				ID:        "oraclelinux",
+				VersionID: "8.10",
+			},
+			metadata: pkg.RpmDBEntry{
+				Name:            "nodejs",
+				Version:         "18.19.0",
+				Release:         "1.module+el8",
+				Arch:            "x86_64",
+				ModularityLabel: strRef("nodejs:18:8060020220315191626:9edba152"),
+			},
+			expected: "pkg:rpm/oraclelinux/nodejs@18.19.0-1.module%2Bel8?arch=x86_64&distro=oraclelinux-8.10&rpmmod=nodejs%3A18%3A8060020220315191626%3A9edba152",
+		},
 	}
 
 	for _, test := range tests {
@@ -94,6 +109,7 @@ func Test_packageURL(t *testing.T) {
 				test.metadata.SourceRpm,
 				test.metadata.Version,
 				test.metadata.Release,
+				test.metadata.ModularityLabel,
 				test.distro,
 			)
 			if actual != test.expected {

@@ -14,6 +14,7 @@ import (
 
 func Test_encodeComponentProperties(t *testing.T) {
 	epoch := 2
+	modularityLabel := "nodejs:18:8060020220315191626:9edba152"
 	tests := []struct {
 		name     string
 		input    pkg.Package
@@ -129,24 +130,37 @@ func Test_encodeComponentProperties(t *testing.T) {
 				Version: "0.9.2-1",
 				Type:    pkg.RpmPkg,
 				Metadata: pkg.RpmDBEntry{
-					Name:      "dive",
-					Epoch:     &epoch,
-					Arch:      "x86_64",
-					Release:   "1",
-					Version:   "0.9.2",
-					SourceRpm: "dive-0.9.2-1.src.rpm",
-					Size:      12406784,
-					Vendor:    "",
-					Files:     []pkg.RpmFileRecord{},
+					Name:            "dive",
+					Epoch:           &epoch,
+					Arch:            "x86_64",
+					Release:         "1",
+					Version:         "0.9.2",
+					SourceRpm:       "dive-0.9.2-1.src.rpm",
+					Size:            12406784,
+					Vendor:          "",
+					ModularityLabel: &modularityLabel,
+					Module: &pkg.RpmModuleInfo{
+						Name:    "nodejs",
+						Stream:  "18",
+						Version: "8060020220315191626",
+						Context: "9edba152",
+					},
+					Files: []pkg.RpmFileRecord{},
 				},
 			},
 			expected: []cyclonedx.Property{
 				{Name: "syft:package:metadataType", Value: "rpm-db-entry"},
 				{Name: "syft:package:type", Value: "rpm"},
 				{Name: "syft:metadata:epoch", Value: "2"},
+				{Name: "syft:metadata:modularityLabel", Value: "nodejs:18:8060020220315191626:9edba152"},
 				{Name: "syft:metadata:release", Value: "1"},
 				{Name: "syft:metadata:size", Value: "12406784"},
 				{Name: "syft:metadata:sourceRpm", Value: "dive-0.9.2-1.src.rpm"},
+				{Name: "syft:rpm:modularityLabel", Value: "nodejs:18:8060020220315191626:9edba152"},
+				{Name: "syft:rpm:module:name", Value: "nodejs"},
+				{Name: "syft:rpm:module:stream", Value: "18"},
+				{Name: "syft:rpm:module:version", Value: "8060020220315191626"},
+				{Name: "syft:rpm:module:context", Value: "9edba152"},
 			},
 		},
 	}
@@ -272,6 +286,7 @@ func Test_deriveBomRef(t *testing.T) {
 }
 
 func Test_decodeComponent(t *testing.T) {
+	modularityLabel := "nodejs:18:8060020220315191626:9edba152"
 	tests := []struct {
 		name         string
 		component    cyclonedx.Component
@@ -344,6 +359,53 @@ func Test_decodeComponent(t *testing.T) {
 				Arch:    "x86_64",
 			},
 			wantPURL: "pkg:rpm/centos/acl@2.2.53-1.el8?arch=x86_64&upstream=acl-2.2.53-1.el8.src.rpm&distro=centos-8",
+		},
+		{
+			name: "handle RPM module properties",
+			component: cyclonedx.Component{
+				Name:       "nodejs",
+				Version:    "18.19.0-1.module+el8",
+				PackageURL: "pkg:rpm/oraclelinux/nodejs@18.19.0-1.module+el8?arch=x86_64&distro=oraclelinux-8.10",
+				Type:       "library",
+				BOMRef:     "pkg:rpm/oraclelinux/nodejs@18.19.0-1.module+el8?arch=x86_64&distro=oraclelinux-8.10",
+				Properties: &[]cyclonedx.Property{
+					{
+						Name:  "syft:package:metadataType",
+						Value: "rpm-db-entry",
+					},
+					{
+						Name:  "syft:rpm:modularityLabel",
+						Value: modularityLabel,
+					},
+					{
+						Name:  "syft:rpm:module:name",
+						Value: "nodejs",
+					},
+					{
+						Name:  "syft:rpm:module:stream",
+						Value: "18",
+					},
+					{
+						Name:  "syft:rpm:module:version",
+						Value: "8060020220315191626",
+					},
+					{
+						Name:  "syft:rpm:module:context",
+						Value: "9edba152",
+					},
+				},
+			},
+			wantMetadata: pkg.RpmDBEntry{
+				ModularityLabel: &modularityLabel,
+				Arch:            "x86_64",
+				Module: &pkg.RpmModuleInfo{
+					Name:    "nodejs",
+					Stream:  "18",
+					Version: "8060020220315191626",
+					Context: "9edba152",
+				},
+			},
+			wantPURL: "pkg:rpm/oraclelinux/nodejs@18.19.0-1.module+el8?arch=x86_64&distro=oraclelinux-8.10",
 		},
 		{
 			name: "generate a purl from package type",

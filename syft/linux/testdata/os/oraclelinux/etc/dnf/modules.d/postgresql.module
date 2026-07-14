@@ -1,0 +1,5 @@
+[postgresql]
+name=postgresql
+stream=13
+profiles=
+state=installed

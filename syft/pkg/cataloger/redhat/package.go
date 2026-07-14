@@ -17,7 +17,7 @@ func newDBPackage(ctx context.Context, dbOrRpmLocation file.Location, m pkg.RpmD
 		Name:      m.Name,
 		Version:   toELVersion(m.Epoch, m.Version, m.Release),
 		Licenses:  pkg.NewLicenseSet(pkg.NewLicensesFromLocationWithContext(ctx, dbOrRpmLocation, licenses...)...),
-		PURL:      packageURL(m.Name, m.Arch, m.Epoch, m.SourceRpm, m.Version, m.Release, distro),
+		PURL:      packageURL(m.Name, m.Arch, m.Epoch, m.SourceRpm, m.Version, m.Release, m.ModularityLabel, distro),
 		Locations: file.NewLocationSet(dbOrRpmLocation.WithAnnotation(pkg.EvidenceAnnotationKey, pkg.PrimaryEvidenceAnnotation)),
 		Type:      pkg.RpmPkg,
 		Metadata:  m,
@@ -32,7 +32,7 @@ func newArchivePackage(ctx context.Context, archiveLocation file.Location, m pkg
 		Name:      m.Name,
 		Version:   toELVersion(m.Epoch, m.Version, m.Release),
 		Licenses:  pkg.NewLicenseSet(pkg.NewLicensesFromLocationWithContext(ctx, archiveLocation, licenses...)...),
-		PURL:      packageURL(m.Name, m.Arch, m.Epoch, m.SourceRpm, m.Version, m.Release, nil),
+		PURL:      packageURL(m.Name, m.Arch, m.Epoch, m.SourceRpm, m.Version, m.Release, m.ModularityLabel, nil),
 		Locations: file.NewLocationSet(archiveLocation.WithAnnotation(pkg.EvidenceAnnotationKey, pkg.PrimaryEvidenceAnnotation)),
 		Type:      pkg.RpmPkg,
 		Metadata:  m,
@@ -85,7 +85,7 @@ func newMetadataFromManifestLine(entry string) (*pkg.RpmDBEntry, error) {
 }
 
 // packageURL returns the PURL for the specific RHEL or Hummingbird package (see https://github.com/package-url/purl-spec)
-func packageURL(name, arch string, epoch *int, srpm string, version, release string, distro *linux.Release) string {
+func packageURL(name, arch string, epoch *int, srpm string, version, release string, modularityLabel *string, distro *linux.Release) string {
 	var namespace string
 	if distro != nil {
 		namespace = distro.ID
@@ -109,6 +109,10 @@ func packageURL(name, arch string, epoch *int, srpm string, version, release str
 
 	if srpm != "" {
 		qualifiers[pkg.PURLQualifierUpstream] = srpm
+	}
+
+	if modularityLabel != nil && *modularityLabel != "" {
+		qualifiers[pkg.PURLQualifierRpmModularity] = *modularityLabel
 	}
 
 	return packageurl.NewPackageURL(

@@ -219,7 +219,25 @@ func toInternalLinuxRelease(d model.LinuxRelease) *linux.Release {
 		CPEName:          d.CPEName,
 		SupportEnd:       d.SupportEnd,
 		ExtendedSupport:  d.ExtendedSupport,
+		InstalledModules: toInternalInstalledModules(d.InstalledModules),
 	}
+}
+
+func toInternalInstalledModules(modules []model.InstalledModule) []linux.InstalledModule {
+	if len(modules) == 0 {
+		return nil
+	}
+	out := make([]linux.InstalledModule, 0, len(modules))
+	for _, module := range modules {
+		out = append(out, linux.InstalledModule{
+			Name:    module.Name,
+			Stream:  module.Stream,
+			Version: module.Version,
+			Context: module.Context,
+			State:   module.State,
+		})
+	}
+	return out
 }
 
 func toSyftRelationships(doc *model.Document, catalog *pkg.Collection, relationships []model.Relationship, idAliases map[string]string) ([]artifact.Relationship, []error) {
