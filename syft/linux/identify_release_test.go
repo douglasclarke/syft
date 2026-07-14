@@ -191,6 +191,20 @@ func TestIdentifyRelease(t *testing.T) {
 				HomeURL:      "https://linux.oracle.com/",
 				BugReportURL: "https://bugzilla.oracle.com/",
 				CPEName:      "cpe:/o:oracle:linux:8:3:server",
+				InstalledModules: []InstalledModule{
+					{
+						Name:    "nodejs",
+						Stream:  "18",
+						Version: "8060020220315191626",
+						Context: "9edba152",
+						State:   "installed",
+					},
+					{
+						Name:   "postgresql",
+						Stream: "13",
+						State:  "installed",
+					},
+				},
 			},
 		},
 		{

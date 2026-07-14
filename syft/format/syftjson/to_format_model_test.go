@@ -13,6 +13,7 @@ import (
 	"github.com/anchore/syft/internal/sourcemetadata"
 	"github.com/anchore/syft/syft/file"
 	"github.com/anchore/syft/syft/format/syftjson/model"
+	"github.com/anchore/syft/syft/linux"
 	"github.com/anchore/syft/syft/pkg"
 	"github.com/anchore/syft/syft/source"
 )
@@ -436,6 +437,36 @@ func Test_toPackageModel_metadataType(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_toLinuxRelease_installedModules(t *testing.T) {
+	got := toLinuxRelease(&linux.Release{
+		ID:        "ol",
+		VersionID: "8.10",
+		InstalledModules: []linux.InstalledModule{
+			{
+				Name:    "nodejs",
+				Stream:  "18",
+				Version: "8060020220315191626",
+				Context: "9edba152",
+				State:   "installed",
+			},
+		},
+	})
+
+	assert.Equal(t, model.LinuxRelease{
+		ID:        "ol",
+		VersionID: "8.10",
+		InstalledModules: []model.InstalledModule{
+			{
+				Name:    "nodejs",
+				Stream:  "18",
+				Version: "8060020220315191626",
+				Context: "9edba152",
+				State:   "installed",
+			},
+		},
+	}, got)
 }
 
 func Test_toPackageModel_layerOrdering(t *testing.T) {

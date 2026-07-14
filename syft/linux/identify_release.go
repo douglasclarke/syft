@@ -58,6 +58,7 @@ var identityFiles = []parseEntry{
 // fill in missing details based on other files present in the filesystem
 var supplementers = []func(file.Resolver, *Release){
 	supplementDebianVersion,
+	supplementDnfModules,
 }
 
 // IdentifyRelease parses distro-specific files to discover and raise linux distribution release details.

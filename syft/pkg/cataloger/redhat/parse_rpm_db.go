@@ -84,6 +84,7 @@ func parseRpmDB(ctx context.Context, resolver file.Resolver, env *generic.Enviro
 			Vendor:          entry.Vendor,
 			Size:            entry.Size,
 			ModularityLabel: &entry.Modularitylabel,
+			Module:          pkg.ParseRpmModularityLabel(entry.Modularitylabel),
 			Files:           files,
 			Provides:        entry.Provides,
 			Requires:        entry.Requires,

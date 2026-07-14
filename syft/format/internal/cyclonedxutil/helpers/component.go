@@ -32,6 +32,7 @@ func EncodeComponent(p pkg.Package, supplier string, locationSorter func(a, b fi
 	}
 	if hasMetadata(p) {
 		props = append(props, EncodeProperties(p.Metadata, "syft:metadata")...)
+		props = append(props, encodeRpmModuleProperties(p.Metadata)...)
 	}
 
 	var properties *[]cyclonedx.Property
@@ -90,6 +91,60 @@ func DeriveBomRef(p pkg.Package) string {
 
 func hasMetadata(p pkg.Package) bool {
 	return p.Metadata != nil
+}
+
+func encodeRpmModuleProperties(metadata any) []cyclonedx.Property {
+	switch m := metadata.(type) {
+	case pkg.RpmDBEntry:
+		return encodeRpmModulePropertiesFromMetadata(m.ModularityLabel, m.Module)
+	case pkg.RpmArchive:
+		return encodeRpmModulePropertiesFromMetadata(m.ModularityLabel, m.Module)
+	case *pkg.RpmDBEntry:
+		if m == nil {
+			return nil
+		}
+		return encodeRpmModulePropertiesFromMetadata(m.ModularityLabel, m.Module)
+	case *pkg.RpmArchive:
+		if m == nil {
+			return nil
+		}
+		return encodeRpmModulePropertiesFromMetadata(m.ModularityLabel, m.Module)
+	default:
+		return nil
+	}
+}
+
+func encodeRpmModulePropertiesFromMetadata(label *string, module *pkg.RpmModuleInfo) []cyclonedx.Property {
+	if module == nil && label != nil {
+		module = pkg.ParseRpmModularityLabel(*label)
+	}
+
+	var props []cyclonedx.Property
+	if label != nil && *label != "" {
+		props = append(props, cyclonedx.Property{
+			Name:  "syft:rpm:modularityLabel",
+			Value: *label,
+		})
+	}
+
+	if module == nil {
+		return props
+	}
+
+	if module.Name != "" {
+		props = append(props, cyclonedx.Property{Name: "syft:rpm:module:name", Value: module.Name})
+	}
+	if module.Stream != "" {
+		props = append(props, cyclonedx.Property{Name: "syft:rpm:module:stream", Value: module.Stream})
+	}
+	if module.Version != "" {
+		props = append(props, cyclonedx.Property{Name: "syft:rpm:module:version", Value: module.Version})
+	}
+	if module.Context != "" {
+		props = append(props, cyclonedx.Property{Name: "syft:rpm:module:context", Value: module.Context})
+	}
+
+	return props
 }
 
 func decodeComponent(c *cyclonedx.Component) *pkg.Package {
@@ -228,10 +283,73 @@ func decodePackageMetadata(vals map[string]string, c *cyclonedx.Component, typeN
 		decodePublisher(c.Publisher, metaPtr)
 		decodeDescription(c.Description, metaPtr)
 		decodeExternalReferences(c, metaPtr)
+		decodeRpmModuleProperties(vals, metaPtr)
 
 		// return the actual interface{} -> struct ... not interface{} -> *struct
 		return PtrToStruct(metaPtr)
 	}
 
 	return nil
+}
+
+func decodeRpmModuleProperties(vals map[string]string, metadata any) {
+	switch m := metadata.(type) {
+	case *pkg.RpmDBEntry:
+		decodeRpmDBEntryModuleProperties(vals, m)
+	case *pkg.RpmArchive:
+		decodeRpmArchiveModuleProperties(vals, m)
+	}
+}
+
+func decodeRpmDBEntryModuleProperties(vals map[string]string, metadata *pkg.RpmDBEntry) {
+	if metadata == nil {
+		return
+	}
+	label, module := rpmModuleProperties(vals, metadata.ModularityLabel)
+	if label != "" && (metadata.ModularityLabel == nil || *metadata.ModularityLabel == "") {
+		metadata.ModularityLabel = &label
+	}
+	if metadata.Module == nil {
+		metadata.Module = module
+	}
+}
+
+func decodeRpmArchiveModuleProperties(vals map[string]string, metadata *pkg.RpmArchive) {
+	if metadata == nil {
+		return
+	}
+	label, module := rpmModuleProperties(vals, metadata.ModularityLabel)
+	if label != "" && (metadata.ModularityLabel == nil || *metadata.ModularityLabel == "") {
+		metadata.ModularityLabel = &label
+	}
+	if metadata.Module == nil {
+		metadata.Module = module
+	}
+}
+
+func rpmModuleProperties(vals map[string]string, metadataLabel *string) (string, *pkg.RpmModuleInfo) {
+	label := vals["syft:rpm:modularityLabel"]
+	if label == "" && metadataLabel != nil {
+		label = *metadataLabel
+	}
+
+	module := pkg.ParseRpmModularityLabel(label)
+	if module != nil {
+		return label, module
+	}
+
+	name := vals["syft:rpm:module:name"]
+	stream := vals["syft:rpm:module:stream"]
+	version := vals["syft:rpm:module:version"]
+	context := vals["syft:rpm:module:context"]
+	if name == "" || stream == "" || version == "" || context == "" {
+		return label, nil
+	}
+
+	return label, &pkg.RpmModuleInfo{
+		Name:    name,
+		Stream:  stream,
+		Version: version,
+		Context: context,
+	}
 }

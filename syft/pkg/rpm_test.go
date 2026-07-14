@@ -48,6 +48,57 @@ func TestRpmMetadata_FileOwner(t *testing.T) {
 	}
 }
 
+func TestParseRpmModularityLabel(t *testing.T) {
+	tests := []struct {
+		name  string
+		label string
+		want  *RpmModuleInfo
+	}{
+		{
+			name:  "valid label",
+			label: "nodejs:18:8060020220315191626:9edba152",
+			want: &RpmModuleInfo{
+				Name:    "nodejs",
+				Stream:  "18",
+				Version: "8060020220315191626",
+				Context: "9edba152",
+			},
+		},
+		{
+			name:  "valid label with whitespace",
+			label: " nodejs : 18 : 8060020220315191626 : 9edba152 ",
+			want: &RpmModuleInfo{
+				Name:    "nodejs",
+				Stream:  "18",
+				Version: "8060020220315191626",
+				Context: "9edba152",
+			},
+		},
+		{
+			name:  "empty label",
+			label: "",
+		},
+		{
+			name:  "partial label",
+			label: "httpd:2.4",
+		},
+		{
+			name:  "too many parts",
+			label: "nodejs:18:8060020220315191626:9edba152:x86_64",
+		},
+		{
+			name:  "empty part",
+			label: "nodejs:18::9edba152",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, ParseRpmModularityLabel(tt.label))
+		})
+	}
+}
+
 func TestRpmSignature_String(t *testing.T) {
 	tests := []struct {
 		name      string

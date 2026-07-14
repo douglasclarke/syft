@@ -25,6 +25,14 @@ var _ FileOwner = (*RpmDBEntry)(nil)
 // RpmArchive represents package metadata extracted directly from a .rpm archive file, containing the same information as an RPM database entry.
 type RpmArchive RpmDBEntry
 
+// RpmModuleInfo represents the module stream identity encoded in an RPM modularity label.
+type RpmModuleInfo struct {
+	Name    string `json:"name"`
+	Stream  string `json:"stream"`
+	Version string `json:"version"`
+	Context string `json:"context"`
+}
+
 // RpmDBEntry represents all captured data from a RPM DB package entry.
 type RpmDBEntry struct {
 	// Name is the RPM package name as found in the RPM database.
@@ -56,6 +64,9 @@ type RpmDBEntry struct {
 
 	// ModularityLabel identifies the module stream for modular RPM packages (e.g., "nodejs:12:20200101").
 	ModularityLabel *string `json:"modularityLabel,omitempty" cyclonedx:"modularityLabel"`
+
+	// Module is the parsed representation of the ModularityLabel, when it is present and valid.
+	Module *RpmModuleInfo `json:"module,omitempty"`
 
 	// Provides lists the virtual packages and capabilities this package provides.
 	Provides []string `json:"provides,omitempty"`
@@ -89,6 +100,33 @@ func (s RpmSignature) String() string {
 	// mimics the output you would see from rpm -q --qf "%{RSAHEADER}"
 	// e.g."RSA/SHA256, Mon May 16 12:32:55 2022, Key ID 702d426d350d275d"
 	return strings.Join([]string{s.PublicKeyAlgorithm + "/" + s.HashAlgorithm, s.Created, "Key ID " + s.IssuerKeyID}, ", ")
+}
+
+// ParseRpmModularityLabel parses an RPM modularity label in name:stream:version:context form.
+func ParseRpmModularityLabel(label string) *RpmModuleInfo {
+	label = strings.TrimSpace(label)
+	if label == "" {
+		return nil
+	}
+
+	parts := strings.Split(label, ":")
+	if len(parts) != 4 {
+		return nil
+	}
+
+	for i := range parts {
+		parts[i] = strings.TrimSpace(parts[i])
+		if parts[i] == "" {
+			return nil
+		}
+	}
+
+	return &RpmModuleInfo{
+		Name:    parts[0],
+		Stream:  parts[1],
+		Version: parts[2],
+		Context: parts[3],
+	}
 }
 
 // RpmFileRecord represents the file metadata for a single file attributed to a RPM package.

@@ -21,6 +21,16 @@ type Release struct {
 	CPEName          string // A CPE name for the operating system, in URI binding syntax
 	SupportEnd       string // The date at which support for this version of the OS ends.
 	ExtendedSupport  bool   `cyclonedx:"extendedSupport"` // indicates there was some evidence of extended support found
+	InstalledModules []InstalledModule
+}
+
+// InstalledModule represents a DNF/AppStream module stream installed or enabled for a Linux distribution.
+type InstalledModule struct {
+	Name    string
+	Stream  string
+	Version string
+	Context string
+	State   string
 }
 
 func (r *Release) String() string {

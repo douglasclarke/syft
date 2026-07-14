@@ -77,6 +77,9 @@ func parseRpmArchive(ctx context.Context, _ file.Resolver, _ *generic.Environmen
 	vendor, err := rpm.Header.GetString(rpmutils.VENDOR)
 	logRpmArchiveErr(reader.Location, "vendor", err)
 
+	modularityLabel, err := rpm.Header.GetString(rpmdb.RPMTAG_MODULARITYLABEL)
+	logRpmArchiveErr(reader.Location, "modularity label", err)
+
 	digestAlgorithm := getDigestAlgorithm(reader.Location, rpm.Header)
 
 	size, err := rpm.Header.InstalledSize()
@@ -107,7 +110,11 @@ func parseRpmArchive(ctx context.Context, _ file.Resolver, _ *generic.Environmen
 		Signatures: sigs,
 		Vendor:     vendor,
 		Size:       int(size),
+		Module:     pkg.ParseRpmModularityLabel(modularityLabel),
 		Files:      mapFiles(files, digestAlgorithm),
+	}
+	if modularityLabel != "" {
+		metadata.ModularityLabel = &modularityLabel
 	}
 
 	return []pkg.Package{newArchivePackage(ctx, reader.Location, metadata, licenses)}, nil, nil

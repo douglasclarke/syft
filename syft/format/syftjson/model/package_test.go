@@ -252,6 +252,57 @@ func Test_UnmarshalJSON(t *testing.T) {
 			},
 		},
 		{
+			name: "rpm metadata with module information",
+			packageData: []byte(`{
+  "id": "739158935bfffc4d",
+  "name": "nodejs",
+  "version": "1:18.19.0-1.module+el8",
+  "type": "rpm",
+  "foundBy": "rpm-db-cataloger",
+  "locations": [
+    {
+      "path": "/var/lib/rpm/Packages"
+    }
+  ],
+  "licenses": [],
+  "language": "",
+  "cpes": [],
+  "purl": "pkg:rpm/oraclelinux/nodejs@18.19.0-1.module+el8?arch=x86_64&epoch=1&rpmmod=nodejs:18:8060020220315191626:9edba152&distro=oraclelinux-8.10",
+  "metadataType": "rpm-db-entry",
+  "metadata": {
+    "name": "nodejs",
+    "version": "18.19.0",
+    "epoch": 1,
+    "architecture": "x86_64",
+    "release": "1.module+el8",
+    "sourceRpm": "nodejs-18.19.0-1.module+el8.src.rpm",
+    "size": 0,
+    "vendor": "Oracle America",
+    "modularityLabel": "nodejs:18:8060020220315191626:9edba152",
+    "module": {
+      "name": "nodejs",
+      "stream": "18",
+      "version": "8060020220315191626",
+      "context": "9edba152"
+    },
+    "files": []
+  }
+}
+`),
+			assert: func(p *Package) {
+				require.NotNil(t, p.Metadata)
+				metadata := p.Metadata.(pkg.RpmDBEntry)
+				require.NotNil(t, metadata.ModularityLabel)
+				assert.Equal(t, "nodejs:18:8060020220315191626:9edba152", *metadata.ModularityLabel)
+				assert.Equal(t, &pkg.RpmModuleInfo{
+					Name:    "nodejs",
+					Stream:  "18",
+					Version: "8060020220315191626",
+					Context: "9edba152",
+				}, metadata.Module)
+			},
+		},
+		{
 			name: "breaking v11-v12 schema change: stack.yaml vs stack.yaml.lock (select stack.yaml)",
 			packageData: []byte(`{
   "id": "46ff1a71f7715f38",

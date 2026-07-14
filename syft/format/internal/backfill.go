@@ -20,6 +20,7 @@ import (
 func Backfill(p *pkg.Package) {
 	backfillFromPurl(p)
 	backfillFromCPE(p)
+	backfillRpmModuleInfo(p)
 }
 
 func backfillFromCPE(p *pkg.Package) {
@@ -130,13 +131,26 @@ func setRpmMetadataFromPurl(p *pkg.Package, rpmmod, arch string) {
 	}
 
 	if p.Metadata == nil {
-		p.Metadata = pkg.RpmDBEntry{}
+		m := pkg.RpmDBEntry{
+			Arch: arch,
+		}
+		if rpmmod != "" {
+			m.ModularityLabel = &rpmmod
+			m.Module = pkg.ParseRpmModularityLabel(rpmmod)
+		}
+		p.Metadata = m
+		return
 	}
 
 	switch m := p.Metadata.(type) {
 	case pkg.RpmDBEntry:
 		if m.ModularityLabel == nil && rpmmod != "" {
 			m.ModularityLabel = &rpmmod
+		} else if m.ModularityLabel != nil && *m.ModularityLabel == "" && rpmmod != "" {
+			m.ModularityLabel = &rpmmod
+		}
+		if m.Module == nil && m.ModularityLabel != nil {
+			m.Module = pkg.ParseRpmModularityLabel(*m.ModularityLabel)
 		}
 		if m.Arch == "" {
 			m.Arch = arch
@@ -145,11 +159,35 @@ func setRpmMetadataFromPurl(p *pkg.Package, rpmmod, arch string) {
 	case pkg.RpmArchive:
 		if m.ModularityLabel == nil && rpmmod != "" {
 			m.ModularityLabel = &rpmmod
+		} else if m.ModularityLabel != nil && *m.ModularityLabel == "" && rpmmod != "" {
+			m.ModularityLabel = &rpmmod
+		}
+		if m.Module == nil && m.ModularityLabel != nil {
+			m.Module = pkg.ParseRpmModularityLabel(*m.ModularityLabel)
 		}
 		if m.Arch == "" {
 			m.Arch = arch
 		}
 		p.Metadata = m
+	}
+}
+
+func backfillRpmModuleInfo(p *pkg.Package) {
+	if p.Type != pkg.RpmPkg {
+		return
+	}
+
+	switch m := p.Metadata.(type) {
+	case pkg.RpmDBEntry:
+		if m.Module == nil && m.ModularityLabel != nil {
+			m.Module = pkg.ParseRpmModularityLabel(*m.ModularityLabel)
+			p.Metadata = m
+		}
+	case pkg.RpmArchive:
+		if m.Module == nil && m.ModularityLabel != nil {
+			m.Module = pkg.ParseRpmModularityLabel(*m.ModularityLabel)
+			p.Metadata = m
+		}
 	}
 }
 

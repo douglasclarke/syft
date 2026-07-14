@@ -91,6 +91,28 @@ func Test_Backfill(t *testing.T) {
 			},
 		},
 		{
+			name: "rpm with parseable rpmmod",
+			in: pkg.Package{
+				PURL: "pkg:rpm/oraclelinux/nodejs@18.19.0-1.module+el8?arch=x86_64&distro=oraclelinux-8.10&rpmmod=nodejs:18:8060020220315191626:9edba152",
+			},
+			expected: pkg.Package{
+				PURL:    "pkg:rpm/oraclelinux/nodejs@18.19.0-1.module+el8?arch=x86_64&distro=oraclelinux-8.10&rpmmod=nodejs:18:8060020220315191626:9edba152",
+				Type:    pkg.RpmPkg,
+				Name:    "nodejs",
+				Version: "18.19.0-1.module+el8",
+				Metadata: pkg.RpmDBEntry{
+					ModularityLabel: strRef("nodejs:18:8060020220315191626:9edba152"),
+					Arch:            "x86_64",
+					Module: &pkg.RpmModuleInfo{
+						Name:    "nodejs",
+						Stream:  "18",
+						Version: "8060020220315191626",
+						Context: "9edba152",
+					},
+				},
+			},
+		},
+		{
 			name: "bad cpe",
 			in: pkg.Package{
 				PURL: "pkg:npm/testp@3.0.0?cpes=cpe:2.3a:testv:testp:3.0.0:*:*:*:*:*:*:*",
